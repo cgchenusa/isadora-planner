@@ -715,10 +715,7 @@
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">RSO Biology Unit / Chapter</div>
                   <input v-model="cw.subjects.biology.core.rsoUnit" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Lesson details…">
                 </div>
-                <div>
-                  <div style="font-size:0.7rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;margin-bottom:0.3rem">⚡ Generation Genius (Lesson / Video)</div>
-                  <input v-model="cw.subjects.biology.core.generationGenius" style="width:100%;font-size:0.85rem;border:1px solid #bfdbfe;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box;background:#eff6ff" placeholder="Generation Genius lesson topic, video title or link…">
-                </div>
+
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Lesson Notes</div>
                   <textarea v-model="cw.subjects.biology.core.notes" rows="2" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Notes…"></textarea>
@@ -755,6 +752,27 @@
                   <button v-if="currentRole==='admin'" @click="addEnrich('biology','website')" style="font-size:0.75rem;padding:0.35rem 0.75rem;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:0.5rem;cursor:pointer;font-weight:600">+ Add Website</button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Generation Genius Enrichment -->
+          <div style="background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;margin-bottom:0.75rem;overflow:hidden">
+            <div class="section-hdr" @click="toggle('bgg'+currentWeek)">
+              <span style="font-weight:700;color:#1d4ed8;font-size:0.92rem;display:flex;align-items:center;gap:0.5rem">
+                ⚡ Generation Genius
+                <span style="font-size:0.68rem;font-weight:600;background:#dbeafe;color:#1e40af;padding:0.1rem 0.5rem;border-radius:999px">Supplemental</span>
+              </span>
+              <span style="color:#9ca3af;font-size:0.75rem">{{isOpen('bgg'+currentWeek)?'▲':'▼'}}</span>
+            </div>
+            <div v-if="isOpen('bgg'+currentWeek)" style="padding:0 1.25rem 1.25rem;border-top:1px solid #f9fafb">
+              <p style="font-size:0.75rem;color:#6b7280;margin:0.75rem 0 0.75rem">Optional support videos — not tracked in Core Curriculum progress.</p>
+              <div v-for="(gg,ggi) in (cw.subjects.biology.ggVideos||[])" :key="ggi" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;background:#eff6ff;border-radius:0.5rem;border:1px solid #bfdbfe;margin-bottom:0.4rem">
+                <input type="checkbox" :disabled="currentRole==='guest'" v-model="gg.watched" style="flex-shrink:0;accent-color:#2563eb">
+                <input class="prose-input" v-model="gg.topic" style="flex:1;font-size:0.85rem;color:#1e3a8a" placeholder="Episode title or topic…">
+                <input v-model="gg.date" type="date" style="font-size:0.75rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.2rem 0.4rem;color:#4b5563;background:#fff" :disabled="currentRole==='guest'">
+                <button v-if="currentRole==='admin'" @click="cw.subjects.biology.ggVideos.splice(ggi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
+              </div>
+              <button v-if="currentRole==='admin'" @click="addGgVideo(cw)" style="font-size:0.75rem;color:#2563eb;background:#eff6ff;border:1px dashed #93c5fd;border-radius:0.5rem;padding:0.4rem 0.8rem;cursor:pointer;font-weight:600;margin-top:0.25rem">+ Add Episode</button>
             </div>
           </div>
 
@@ -1146,49 +1164,174 @@
 
     <!-- BOOK LOG -->
     <div v-if="activeTab==='books'">
+      <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem">
         <div>
           <div style="font-size:1.25rem;font-weight:800;color:#1f2937">📚 Isadora's Book Log</div>
-          <div style="font-size:0.75rem;color:#6b7280">Books checked in weekly enrichment are automatically added here!</div>
+          <div style="font-size:0.75rem;color:#6b7280">{{books.length}} book{{books.length===1?'':'s'}} — click any title to see details &amp; notes</div>
         </div>
-        <button v-if="currentRole==='admin'" @click="addBook" style="padding:0.45rem 1rem;background:#7c3aed;color:#fff;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer">+ Add Book</button>
+        <button v-if="currentRole==='admin'" @click="openAddBookModal()" style="display:flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;background:#7c3aed;color:#fff;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;box-shadow:0 2px 6px #7c3aed44">+ Add Book / Log Reading</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">
-        <div v-for="(bk,bi) in books" :key="bi" style="background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;padding:1.125rem">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem">
-            <div style="flex:1;min-width:0">
-              <input class="prose-input" v-model="bk.title" style="font-weight:700;font-size:0.9rem;color:#1f2937;border-bottom:1px solid #e5e7eb;padding-bottom:0.25rem;margin-bottom:0.25rem" placeholder="Book title…">
-              <input class="prose-input" v-model="bk.author" style="font-size:0.78rem;color:#6b7280" placeholder="Author (optional)…">
+      <!-- Subject filter pills -->
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
+        <span style="font-size:0.7rem;color:#6b7280;align-self:center">Filter:</span>
+        <span v-for="tag in ['science','history','literature','math','free_reading','enrichment','reading','completed']" :key="tag" style="font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:999px;cursor:pointer;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280">{{tag==='science'?'🔬 Science':tag==='history'?'🏛 History':tag==='literature'?'📚 Literature':tag==='math'?'🧠 Math':tag==='free_reading'?'📹 Free Reading':tag==='enrichment'?'✨ Enrichment':tag==='reading'?'🔖 Reading':'✅ Completed'}}</span>
+      </div>
+
+      <!-- Book list -->
+      <div style="display:flex;flex-direction:column;gap:0.5rem">
+        <div v-if="!books.length" style="text-align:center;padding:3rem;color:#9ca3af;background:#f9fafb;border-radius:0.875rem;border:2px dashed #e5e7eb">
+          <div style="font-size:2rem;margin-bottom:0.5rem">📚</div>
+          <div style="font-weight:700;margin-bottom:0.25rem">No books logged yet</div>
+          <div style="font-size:0.8rem">Click "+ Add Book" to start the reading log</div>
+        </div>
+
+        <div v-for="(bk,bi) in books" :key="bi" style="background:#fff;border-radius:0.75rem;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 3px #0001">
+          <!-- Compact row — always visible -->
+          <div @click="toggleBook(bi)" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;cursor:pointer;transition:background 0.15s" :style="expandedBooks[bi]?'background:#f5f3ff':''">
+            <!-- Status dot -->
+            <span :style="'width:0.55rem;height:0.55rem;border-radius:50%;flex-shrink:0;'+(bk.status==='completed'?'background:#10b981':bk.status==='reading'?'background:#f59e0b':'background:#d1d5db')" :title="bk.status"></span>
+            <!-- Title -->
+            <span style="font-weight:700;font-size:0.88rem;color:#1f2937;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{bk.title||'Untitled'}}</span>
+            <!-- Subject tag -->
+            <span v-if="bk.subject" :style="'font-size:0.68rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:999px;white-space:nowrap;'+(bk.subject==='science'?'background:#ecfdf5;color:#047857;border-color:#a7f3d0':bk.subject==='history'?'background:#fffbeb;color:#92400e;border-color:#fde68a':bk.subject==='literature'?'background:#eef2ff;color:#4338ca;border-color:#c7d2fe':bk.subject==='math'?'background:#f0f9ff;color:#0369a1;border-color:#bae6fd':bk.subject==='free_reading'?'background:#faf5ff;color:#7c3aed;border-color:#e9d5ff':'background:#f4f4f5;color:#3f3f46;border-color:#d4d4d8')">{{bk.subject==='science'?'🔬':bk.subject==='history'?'🏛':bk.subject==='literature'?'📚':bk.subject==='math'?'🧠':bk.subject==='free_reading'?'📹':'✨'}} {{bk.subject==='free_reading'?'Free Reading':bk.subject==='enrichment'?'Enrichment':bk.subject?bk.subject[0].toUpperCase()+bk.subject.slice(1):''}}</span>
+            <!-- Stars -->
+            <span style="display:flex;gap:0.05rem;flex-shrink:0">
+              <span v-for="s in 5" :key="s" style="font-size:0.8rem;" :style="s<=bk.rating?'color:#f59e0b':'color:#d1d5db'">★</span>
+            </span>
+            <!-- Chevron -->
+            <span style="font-size:0.65rem;color:#9ca3af;flex-shrink:0">{{expandedBooks[bi]?'▲':'▼'}}</span>
+          </div>
+
+          <!-- Expanded details -->
+          <div v-if="expandedBooks[bi]" style="padding:0.875rem 1rem 1rem;border-top:1px solid #f3f4f6;background:#fafafa">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+              <div>
+                <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.2rem">Title</div>
+                <input class="prose-input" v-model="bk.title" :disabled="currentRole==='guest'" style="font-size:0.85rem;font-weight:700;color:#1f2937;width:100%" placeholder="Book title…">
+              </div>
+              <div>
+                <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.2rem">Author</div>
+                <input class="prose-input" v-model="bk.author" :disabled="currentRole==='guest'" style="font-size:0.85rem;color:#4b5563;width:100%" placeholder="Author…">
+              </div>
+              <div>
+                <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.2rem">Subject / Tag</div>
+                <select v-model="bk.subject" :disabled="currentRole==='guest'" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem">
+                  <option value="">— none —</option>
+                  <option value="science">Science</option>
+                  <option value="history">History</option>
+                  <option value="literature">Literature</option>
+                  <option value="math">Math</option>
+                  <option value="free_reading">Free Reading</option>
+                  <option value="enrichment">Enrichment</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.2rem">Status</div>
+                <select v-model="bk.status" :disabled="currentRole==='guest'" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem">
+                  <option value="to-read">To Read</option>
+                  <option value="reading">🔖 Reading</option>
+                  <option value="completed">✅ Completed</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.2rem">Pages Read / Total</div>
+                <div style="display:flex;gap:0.4rem;align-items:center">
+                  <input v-model="bk.pages" :disabled="currentRole==='guest'" type="number" min="0" style="width:70px;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem" placeholder="0">
+                  <span style="font-size:0.8rem;color:#9ca3af">/</span>
+                  <input v-model="bk.totalPages" :disabled="currentRole==='guest'" type="number" min="0" style="width:70px;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem" placeholder="—">
+                </div>
+              </div>
+              <div>
+                <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.2rem">Date Logged</div>
+                <input v-model="bk.dateAdded" :disabled="currentRole==='guest'" type="date" style="font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem;width:100%">
+              </div>
             </div>
-            <button v-if="currentRole==='admin'" @click="books.splice(bi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;flex-shrink:0">✕</button>
+            <div style="margin-bottom:0.75rem">
+              <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.3rem">Rating</div>
+              <div style="display:flex;gap:0.25rem">
+                <span v-for="s in 5" :key="s" @click="setRating(bk,s)" style="font-size:1.3rem;cursor:pointer;transition:transform 0.1s" :style="s<=bk.rating?'color:#f59e0b':'color:#d1d5db'" :class="currentRole==='guest'?'':'hover:scale-110'">★</span>
+              </div>
+            </div>
+            <div style="margin-bottom:0.75rem">
+              <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.3rem">Pedagogical Notes</div>
+              <textarea v-model="bk.review" :disabled="currentRole==='guest'" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.6rem;outline:none;box-sizing:border-box;background:#fff;resize:vertical" placeholder="Age-appropriateness, vocabulary level, Isadora's reaction, notes for LP meeting…"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end">
+              <button v-if="currentRole==='admin'" @click="books.splice(bi,1)" style="font-size:0.75rem;color:#ef4444;background:#fff;border:1px solid #fecaca;border-radius:0.4rem;padding:0.3rem 0.75rem;cursor:pointer">Delete Book</button>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.6rem">
-            <span style="font-size:0.75rem;color:#6b7280">Rating:</span>
-            <span v-for="s in 5" :key="s" class="star-btn" @click="currentRole!=='guest' && (bk.rating=s)" :style="s<=bk.rating?'color:#f59e0b':'color:#d1d5db'" :class="currentRole==='guest'?'opacity-50 cursor-not-allowed':''"  >★</span>
+        </div>
+      </div>
+
+      <!-- Add Book Modal -->
+      <div v-if="showAddBookModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem" @click.self="showAddBookModal=false">
+        <div style="background:#fff;border-radius:1rem;padding:1.5rem;width:100%;max-width:480px;box-shadow:0 20px 60px #0003;max-height:90vh;overflow-y:auto">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+            <div style="font-size:1.05rem;font-weight:800;color:#1f2937">📚 Add Book / Log Reading</div>
+            <button @click="showAddBookModal=false" style="color:#9ca3af;background:none;border:none;cursor:pointer;font-size:1.1rem">✕</button>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.6rem">
+          <div style="display:flex;flex-direction:column;gap:0.875rem">
             <div>
-              <div style="font-size:0.7rem;color:#9ca3af;margin-bottom:0.2rem">Subject</div>
-              <select v-model="bk.subject" style="width:100%;font-size:0.78rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem">
-                <option value="">—</option>
-                <option value="history">History</option>
-                <option value="biology">Biology</option>
-                <option value="math">Math</option>
-                <option value="ela">ELA</option>
-                <option value="other">Free Reading</option>
-              </select>
+              <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Title <span style="color:#ef4444">*</span></label>
+              <input v-model="newBookDraft.title" style="width:100%;font-size:0.9rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.55rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Book title…" @keyup.enter="confirmAddBook()">
             </div>
             <div>
-              <div style="font-size:0.7rem;color:#9ca3af;margin-bottom:0.2rem">Status</div>
-              <select v-model="bk.status" style="width:100%;font-size:0.78rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem">
-                <option value="to-read">To Read</option>
-                <option value="reading">Reading</option>
-                <option value="completed">Completed</option>
-              </select>
+              <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Author <span style="color:#9ca3af;font-weight:400">(optional)</span></label>
+              <input v-model="newBookDraft.author" style="width:100%;font-size:0.88rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Author name…">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+              <div>
+                <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Subject / Tag</label>
+                <select v-model="newBookDraft.subject" style="width:100%;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.5rem 0.65rem">
+                  <option value="">— none —</option>
+                  <option value="science">Science</option>
+                  <option value="history">History</option>
+                  <option value="literature">Literature</option>
+                  <option value="math">Math</option>
+                  <option value="free_reading">Free Reading</option>
+                  <option value="enrichment">Enrichment</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Status</label>
+                <select v-model="newBookDraft.status" style="width:100%;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.5rem 0.65rem">
+                  <option value="to-read">To Read</option>
+                  <option value="reading">🔖 Reading</option>
+                  <option value="completed">✅ Completed</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Rating</label>
+              <div style="display:flex;gap:0.3rem">
+                <span v-for="s in 5" :key="s" @click="setDraftRating(s)" style="font-size:1.5rem;cursor:pointer" :style="s<=newBookDraft.rating?'color:#f59e0b':'color:#d1d5db'">★</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+              <div>
+                <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Pages Read / Total</label>
+                <div style="display:flex;gap:0.4rem;align-items:center">
+                  <input v-model="newBookDraft.pages" type="number" min="0" style="width:70px;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.4rem 0.5rem" placeholder="0">
+                  <span style="color:#9ca3af">/</span>
+                  <input v-model="newBookDraft.totalPages" type="number" min="0" style="width:70px;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.4rem 0.5rem" placeholder="—">
+                </div>
+              </div>
+              <div>
+                <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Date Logged</label>
+                <input v-model="newBookDraft.dateAdded" type="date" style="width:100%;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.45rem 0.65rem">
+              </div>
+            </div>
+            <div>
+              <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Pedagogical Notes</label>
+              <textarea v-model="newBookDraft.review" rows="3" style="width:100%;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box;resize:vertical" placeholder="Age-appropriateness, vocabulary, Isadora's reaction, notes for LP…"></textarea>
+            </div>
+            <div style="display:flex;gap:0.75rem;margin-top:0.25rem">
+              <button @click="showAddBookModal=false" style="flex:1;padding:0.6rem;font-size:0.88rem;background:#f3f4f6;color:#374151;border:none;border-radius:0.5rem;cursor:pointer;font-weight:600">Cancel</button>
+              <button @click="confirmAddBook()" :disabled="!newBookDraft.title.trim()" :style="newBookDraft.title.trim()?'background:#7c3aed;color:#fff;cursor:pointer':'background:#e5e7eb;color:#9ca3af;cursor:not-allowed'" style="flex:2;padding:0.6rem;font-size:0.88rem;border:none;border-radius:0.5rem;font-weight:700">✅ Add to Log</button>
             </div>
           </div>
-          <textarea v-model="bk.review" rows="2" style="width:100%;font-size:0.78rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.6rem;outline:none;box-sizing:border-box" placeholder="Notes, favorites, or review…"></textarea>
         </div>
       </div>
     </div>
@@ -1949,7 +2092,8 @@ createApp({
         // Switch activeTab away from removed tabs
         if (nb.activeTab === 'terms' || nb.activeTab === 'narration' || nb.activeTab === 'photos') nb.activeTab = 'bigideas';
       }
-      if (w && !w.subjects.biology) w.subjects.biology = {topic:'',status:'pending',core:{rsoUnit:'',generationGenius:'',notes:''},enrichment:[],labs:[],notebook:{activeTab:'bigideas',terms:[],bigIdeas:[],smallStuff:[],workImages:[]},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:''}}};
+      if (w && !w.subjects.biology) w.subjects.biology = {topic:'',status:'pending',core:{rsoUnit:'',generationGenius:'',notes:''},generationGenius:'',ggVideos:[],enrichment:[],labs:[],notebook:{activeTab:'bigideas',terms:[],bigIdeas:[],smallStuff:[],workImages:[]},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:''}}};
+      if (w?.subjects?.biology && !Array.isArray(w.subjects.biology.ggVideos)) { w.subjects.biology.ggVideos = w.subjects.biology.core?.generationGenius ? [{topic:w.subjects.biology.core.generationGenius,watched:false,date:''}] : []; }
       if (w && !w.subjects.math)    w.subjects.math    = {topic:'',weeklyTarget:'',status:'pending',timeSpent:'',starsAndTrophies:'',lessonsCompleted:'',workImages:[],showSupplements:false,supplements:''};
       if (w && !w.subjects.ela) w.subjects.ela = {topic:'',status:'pending',reading:{book:"Charlotte's Web",chapters:'',notes:''},writing:{program:'IEW / Oakschool',lesson:'',styleFocus:'',studentDraft:'',workSample:{url:'',caption:''}},grammar:{mctTopic:'',punctuationTopic:'',notes:''},spelling:{lessonRule:'',score:''},vocabulary:{words:'',notes:''}};
       // Ensure new ELA fields exist on older week objects
@@ -2169,7 +2313,30 @@ createApp({
     const addEnrich = (subject,type) => {
       cw.value.subjects[subject].enrichment.push({type,title:'',url:'',done:false});
     };
-    const addBook = () => books.push({title:'',author:'',rating:0,subject:'',status:'to-read',review:''});
+    const addGgVideo = (weekObj) => {
+      if (!weekObj.subjects.biology.ggVideos) weekObj.subjects.biology.ggVideos = [];
+      weekObj.subjects.biology.ggVideos.push({topic:'',watched:false,date:''});
+    };
+
+    // Book log reactive state
+    const showAddBookModal = Vue.ref(false);
+    const newBookDraft = Vue.reactive({title:'',author:'',rating:0,subject:'',status:'reading',review:'',pages:'',totalPages:'',dateAdded:''});
+    const expandedBooks = Vue.reactive({});
+
+    const openAddBookModal = () => {
+      Object.assign(newBookDraft, {title:'',author:'',rating:0,subject:'',status:'reading',review:'',pages:'',totalPages:'',dateAdded:new Date().toISOString().split('T')[0]});
+      showAddBookModal.value = true;
+    };
+    const confirmAddBook = () => {
+      if (!newBookDraft.title.trim()) return;
+      books.push(JSON.parse(JSON.stringify(newBookDraft)));
+      showAddBookModal.value = false;
+    };
+    const toggleBook = (bi) => { expandedBooks[bi] = !expandedBooks[bi]; };
+    const setRating = (bk, s) => { if (currentRole.value !== 'guest') bk.rating = s; };
+    const setDraftRating = (s) => { newBookDraft.rating = s; };
+
+    const addBook = () => openAddBookModal();
     const addLpMeeting = () => lpMeetings.push({title:`LP${lpMeetings.length+1} Meeting`,dateTime:'Wednesday · 12:30 PM',confirmed:false});
 
     const addWeek = () => {
@@ -2206,6 +2373,7 @@ createApp({
           biology:{
             topic:'',status:'pending',
             core:{rsoUnit:'',generationGenius:'',notes:''},
+            ggVideos:[],
             enrichment:[],
             labs:[
               {number:1,title:'Lab 1: ',objective:'',materials:'',procedure:'',observations:'',conclusion:'',done:false,url:''},
@@ -2294,6 +2462,7 @@ createApp({
             biology: {
               topic:'', status:'pending',
               core: { rsoUnit:'', generationGenius:'', notes:'' },
+              ggVideos: [],
               enrichment: [],
               labs: [
                 { number:1, title:'Lab 1: ', objective:'', materials:'', procedure:'', observations:'', conclusion:'', done:false, url:'' },
@@ -2368,6 +2537,10 @@ createApp({
           }
           if (w.subjects.biology?.core && w.subjects.biology.core.generationGenius === undefined) {
             w.subjects.biology.core.generationGenius = '';
+          }
+          if (w.subjects.biology && !Array.isArray(w.subjects.biology.ggVideos)) {
+            const legacy = w.subjects.biology.core?.generationGenius;
+            w.subjects.biology.ggVideos = legacy ? [{topic:legacy,watched:false,date:''}] : [];
           }
           // History notebook: ensure copywork field exists (schema upgrade)
           if (w.subjects.history?.activities?.notebook) {
@@ -2717,6 +2890,7 @@ createApp({
           yearAtGlance.splice(0,yearAtGlance.length,...(d.yearAtGlance || []));
           electives.splice(0,   electives.length,   ...(d.electives    || []));
           saveNow('Import from file — ' + weeks.length + ' weeks', true);
+          _migrateBookSubjects();
           console.log('[Import] Hard overwrite complete — Firestore updated.');
           alert(`✅ Database replaced!\n\n${weeks.length} week(s) loaded. Firestore updated (full overwrite).`);
         } catch(err) { alert('❌ Error importing: '+err.message); }
@@ -2756,6 +2930,7 @@ createApp({
         pasteJsonError.value = '';
         currentWeek.value    = 0;
         saveNow('Paste JSON import — ' + weeks.length + ' weeks', true);
+        _migrateBookSubjects();
         console.log('[Import] Hard overwrite complete — Firestore updated.');
         alert(`✅ Database replaced!\n\n${weeks.length} week(s) loaded. Firestore updated (full overwrite).`);
       } catch(err) {
@@ -2894,8 +3069,15 @@ createApp({
         } catch(e) { return false; }
       };
 
+      // ── Book subject migration: remap old ids to new SUBJECTS config ──
+      const _migrateBookSubjects = () => {
+        const MAP = { biology:'science', ela:'literature', other:'free_reading' };
+        books.forEach(b => { if (MAP[b.subject]) b.subject = MAP[b.subject]; });
+      };
+
       // ── 1. Immediate load from localStorage ──────────────────────────
       loaded = tryLoad(STORAGE_KEY);
+      if (loaded) _migrateBookSubjects();
       if (!loaded) {
         for (const k of FALLBACK_KEYS) {
           loaded = tryLoad(k);
@@ -2982,7 +3164,8 @@ createApp({
                 _applyData(fsData);
                 _realDataLoaded = true;
                 try { localStorage.setItem(STORAGE_KEY, JSON.stringify(fsData)); } catch(e){}
-                console.log('[Firestore] First load: applied cloud data (savedAt=' + cloudSaved + ')');
+                _migrateBookSubjects();
+          console.log('[Firestore] First load: applied cloud data (savedAt=' + cloudSaved + ')');
               } else {
                 console.log('[Firestore] First load: local data is newer — keeping local');
               }
@@ -3041,6 +3224,8 @@ createApp({
       isOpen, toggle, sortedEnrichment, onEnrichCheck, uploadLocalFile,
       allAnswered, selectAns, quizClass, submitQuiz, resetQuiz,
       addEnrich, addBook, addLpMeeting, addWeek, shiftSchedule, generateFullYear, avgScore,
+      addGgVideo, openAddBookModal, confirmAddBook, toggleBook, setRating, setDraftRating,
+      showAddBookModal, newBookDraft, expandedBooks,
       exportData, importData, applyPastedJson, addWorkImage,
       showPasteModal, pasteJsonText, pasteJsonError,
       arenaState, arenaPool, startArena, arenaSelect, arenaNext,
