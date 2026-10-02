@@ -163,11 +163,16 @@
           onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
           🎒 Student — Isadora
         </button>
-        <button @click="switchRole('guest')"
-          style="padding:0.9rem 1rem;background:#f0fdf4;color:#065f46;border:2px solid #6ee7b7;border-radius:0.875rem;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 0.1s"
-          onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
-          👁 Guest / Teacher <span style="font-size:0.72rem;font-weight:500;color:#059669">(Read-Only)</span>
-        </button>
+        <div>
+          <button @click="switchRole('guest')"
+            style="width:100%;padding:0.9rem 1rem;background:#f0fdf4;color:#065f46;border:2px solid #6ee7b7;border-radius:0.875rem;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 0.1s"
+            onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+            👁 Guest / Teacher <span style="font-size:0.72rem;font-weight:500;color:#059669">(Read-Only)</span>
+          </button>
+          <div style="margin-top:0.35rem;font-size:0.68rem;color:#6b7280;text-align:center;display:flex;align-items:center;justify-content:center;gap:0.3rem">
+            <span>🔐</span> Acessos neste modo são registrados pelo administrador
+          </div>
+        </div>
         <button @click="switchRole('parent')"
           style="padding:0.9rem 1rem;background:#fef3c7;color:#92400e;border:2px solid #fde68a;border-radius:0.875rem;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 0.1s"
           onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
@@ -233,6 +238,12 @@
           {{t.icon}} {{t.label}}
         </button>
       </div>
+    </div>
+    <!-- Guest monitoring banner -->
+    <div v-if="currentRole==='guest'"
+      style="background:linear-gradient(90deg,#ecfdf5,#f0fdf4);border-top:1px solid #a7f3d0;padding:0.3rem 1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem">
+      <span style="font-size:0.8rem">🔐</span>
+      <span style="font-size:0.72rem;color:#065f46;font-weight:600">Modo Guest / Teacher — somente leitura · Este acesso está sendo registrado pelo administrador</span>
     </div>
   </header>
 
