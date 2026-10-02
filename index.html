@@ -135,9 +135,9 @@
   <!-- PIN MODAL -->
   <div v-if="showPinModal" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(3px)">
     <div style="background:#fff;border-radius:1.25rem;box-shadow:0 8px 40px #0003;padding:2rem 2.25rem;width:320px;max-width:92vw;text-align:center">
-      <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
-      <div style="font-size:1.1rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem">Admin PIN Required</div>
-      <div style="font-size:0.82rem;color:#6b7280;margin-bottom:1.25rem">Enter the 4-digit PIN to unlock Parent&nbsp;/ Admin mode.</div>
+      <div style="font-size:2rem;margin-bottom:0.5rem">{{targetRole==='admin' ? '🔑' : '🎒'}}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem">{{targetRole==='admin' ? 'Admin PIN Required' : 'Student PIN Required'}}</div>
+      <div style="font-size:0.82rem;color:#6b7280;margin-bottom:1.25rem">{{targetRole==='admin' ? 'Enter the 4-digit PIN to unlock Parent / Admin mode.' : "Enter Isadora's PIN to unlock the Student profile."}}</div>
       <input type="password" inputmode="numeric" maxlength="4" v-model="pinInput"
         @keyup.enter="confirmPin"
         placeholder="••••"
@@ -148,6 +148,33 @@
         <button @click="cancelPin" style="flex:1;padding:0.6rem;background:#f3f4f6;color:#374151;border:none;border-radius:0.625rem;font-size:0.875rem;font-weight:600;cursor:pointer">Cancel</button>
         <button @click="confirmPin" style="flex:1;padding:0.6rem;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:0.625rem;font-size:0.875rem;font-weight:700;cursor:pointer">Unlock</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ====== LOCK SCREEN ====== -->
+  <div v-if="currentRole==='locked'" style="position:fixed;inset:0;z-index:9998;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#1e3a5f 100%);display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div style="background:#fff;border-radius:1.5rem;padding:2.5rem 2rem;width:360px;max-width:92vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.45)">
+      <div style="font-size:3.5rem;margin-bottom:0.5rem">📚</div>
+      <div style="font-size:1.25rem;font-weight:800;color:#1e1b4b;margin-bottom:0.2rem">Isadora's Homeschool Planner</div>
+      <div style="font-size:0.78rem;color:#6b7280;margin-bottom:2rem">2026–2027 Academic Year · Select your profile to continue.</div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem">
+        <button @click="switchRole('student')"
+          style="padding:0.9rem 1rem;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:0.875rem;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px #7c3aed55;transition:transform 0.1s"
+          onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+          🎒 Student — Isadora
+        </button>
+        <button @click="switchRole('guest')"
+          style="padding:0.9rem 1rem;background:#f0fdf4;color:#065f46;border:2px solid #6ee7b7;border-radius:0.875rem;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 0.1s"
+          onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+          👁 Guest / Teacher <span style="font-size:0.72rem;font-weight:500;color:#059669">(Read-Only)</span>
+        </button>
+        <button @click="switchRole('admin')"
+          style="padding:0.9rem 1rem;background:#fef3c7;color:#92400e;border:2px solid #fde68a;border-radius:0.875rem;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 0.1s"
+          onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+          🔑 Parent / Admin
+        </button>
+      </div>
+      <div style="font-size:0.68rem;color:#d1d5db;margin-top:1.75rem">Student and Admin profiles require a PIN.</div>
     </div>
   </div>
 
@@ -180,8 +207,9 @@
                 :style="currentRole==='admin'  ? 'background-color:#fef3c7;color:#92400e;border-color:#fde68a' :
                         currentRole==='student' ? 'background-color:#ede9fe;color:#5b21b6;border-color:#c4b5fd' :
                                                   'background-color:#f0fdf4;color:#065f46;border-color:#6ee7b7'">
+                <option v-if="currentRole==='locked'" value="locked" disabled>🔒 Locked</option>
                 <option value="student">🎒 Student</option>
-                <option value="guest">👁 Observer</option>
+                <option value="guest">👁 Guest / Teacher</option>
                 <option value="admin">🔑 Admin</option>
               </select>
             </div>
@@ -1721,6 +1749,44 @@
           </div>
         </template>
       </div>
+      <!-- Security & Access Logs (admin only) -->
+      <div v-if="currentRole==='admin'" style="background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;margin-bottom:1.25rem;overflow:hidden">
+        <div @click="showAccessLogs=!showAccessLogs;showAccessLogs&&fetchAccessLogs()"
+          style="padding:0.875rem 1.25rem;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+          <span style="font-weight:700;color:#1f2937">🔐 Security &amp; Access Logs</span>
+          <div style="display:flex;align-items:center;gap:0.6rem">
+            <span style="font-size:0.72rem;color:#6b7280">Last 20 entries</span>
+            <span style="font-size:0.85rem;color:#9ca3af">{{showAccessLogs ? '▲' : '▼'}}</span>
+          </div>
+        </div>
+        <div v-if="showAccessLogs" style="padding:0.75rem 1.25rem">
+          <div v-if="!accessLogs.length" style="padding:1rem 0;text-align:center;color:#9ca3af;font-size:0.82rem">No log entries yet — loads and profile switches are recorded here.</div>
+          <div v-else class="scroll-x">
+            <table style="width:100%;border-collapse:collapse;font-size:0.78rem">
+              <thead>
+                <tr style="background:#f9fafb">
+                  <th style="text-align:left;padding:0.5rem 0.75rem;font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;white-space:nowrap">Timestamp</th>
+                  <th style="text-align:left;padding:0.5rem 0.5rem;font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase">Profile</th>
+                  <th style="text-align:left;padding:0.5rem 0.5rem;font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase">Action</th>
+                  <th style="text-align:left;padding:0.5rem 0.5rem;font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase">Device</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(lg,li) in accessLogs" :key="li" style="border-top:1px solid #f9fafb">
+                  <td style="padding:0.45rem 0.75rem;color:#6b7280;white-space:nowrap;font-size:0.72rem">{{new Date(lg.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}}</td>
+                  <td style="padding:0.45rem 0.5rem">
+                    <span :style="lg.profile==='admin' ? 'background:#fef3c7;color:#92400e' : lg.profile==='student' ? 'background:#ede9fe;color:#6d28d9' : 'background:#f0fdf4;color:#065f46'"
+                      style="font-size:0.68rem;padding:0.15rem 0.5rem;border-radius:999px;font-weight:700">{{lg.profile}}</span>
+                  </td>
+                  <td style="padding:0.45rem 0.5rem;color:#374151;font-weight:500">{{lg.action}}</td>
+                  <td style="padding:0.45rem 0.5rem;color:#9ca3af;font-size:0.68rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="lg.device">{{lg.device ? lg.device.split(' ').slice(0,4).join(' ') : '—'}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <button @click="fetchAccessLogs()" style="margin-top:0.75rem;font-size:0.75rem;padding:0.35rem 0.875rem;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:0.5rem;cursor:pointer;font-weight:600">🔄 Refresh Logs</button>
+        </div>
+      </div>
     </div>
 
 
@@ -1972,38 +2038,84 @@ createApp({
     const pasteJsonText   = ref('');
     const pasteJsonError  = ref('');
     // ── Role-Based Access ──────────────────────────────────────
-    const ADMIN_PIN = '2026';
-    const currentRole  = ref(localStorage.getItem('planner_role') || 'student');
+    const ADMIN_PIN   = '2026';
+    const STUDENT_PIN = '2017';     // Isadora's personal PIN
+    // Default to 'locked' if no saved session — shows lock screen until PIN entered
+    const _savedRole = localStorage.getItem('planner_role');
+    const currentRole  = ref(_savedRole && _savedRole !== 'locked' ? _savedRole : 'locked');
     const showPinModal = ref(false);
     const pinInput     = ref('');
     const pinError     = ref('');
     const targetRole   = ref('admin');
+
+    // ── Access Logs (admin view) ────────────────────────────
+    const accessLogs    = reactive([]);
+    const showAccessLogs = ref(false);
+
+    // Write one entry to Firestore access_logs collection (fire-and-forget)
+    const _logAccess = (action, profileOverride) => {
+      if (!_db) return;
+      try {
+        _db.collection('access_logs').add({
+          timestamp: new Date().toISOString(),
+          profile:   profileOverride || currentRole.value,
+          device:    navigator.userAgent,
+          action
+        });
+      } catch(e) { console.warn('[AccessLog] write failed:', e); }
+    };
+
+    // Fetch the last 20 log entries for the admin viewer
+    const fetchAccessLogs = () => {
+      if (!_db) return;
+      _db.collection('access_logs')
+        .orderBy('timestamp', 'desc')
+        .limit(20)
+        .get()
+        .then(snap => {
+          accessLogs.splice(0);
+          snap.forEach(doc => accessLogs.push(doc.data()));
+        })
+        .catch(e => console.warn('[AccessLogs] fetch failed:', e));
+    };
+
     const switchRole = (role) => {
       if (role === 'admin') {
         targetRole.value = 'admin';
         pinInput.value   = '';
         pinError.value   = '';
         showPinModal.value = true;
-      } else {
-        currentRole.value = role;
-        localStorage.setItem('planner_role', role);
+      } else if (role === 'student') {
+        targetRole.value = 'student';
+        pinInput.value   = '';
+        pinError.value   = '';
+        showPinModal.value = true;
+      } else if (role === 'guest') {
+        currentRole.value = 'guest';
+        localStorage.setItem('planner_role', 'guest');
+        _logAccess('Profile Switch: Guest / Teacher (Read-Only)', 'guest');
       }
+      // 'locked' is not a valid switch target — handled by lock screen
     };
     const confirmPin = () => {
-      if (pinInput.value === ADMIN_PIN) {
+      const validPin = targetRole.value === 'admin' ? ADMIN_PIN : STUDENT_PIN;
+      if (pinInput.value === validPin) {
         currentRole.value = targetRole.value;
         localStorage.setItem('planner_role', targetRole.value);
         showPinModal.value = false;
         pinInput.value = '';
         pinError.value = '';
+        _logAccess('Profile Unlocked: ' + targetRole.value, targetRole.value);
+        if (targetRole.value === 'admin') fetchAccessLogs();
       } else {
-        pinError.value = 'Incorrect PIN. Try again.';
+        pinError.value = 'Incorrect PIN — try again.';
       }
     };
     const cancelPin = () => {
       showPinModal.value = false;
       pinInput.value = '';
       pinError.value = '';
+      // If locked and user cancels, stay locked
     };
     // ──────────────────────────────────────────────────────────
     const activeSubjTab = ref('history');
@@ -2373,7 +2485,7 @@ createApp({
     };
 
     const allAnswered = quiz => quiz.questions.every(q => q.answer !== null);
-    const selectAns = (quiz,qi,oi) => { if (!quiz.submitted) quiz.questions[qi].answer = oi; };
+    const selectAns = (quiz,qi,oi) => { if (!quiz.submitted && currentRole.value === 'student') quiz.questions[qi].answer = oi; };
     const quizClass = (quiz,qi,oi) => {
       const q = quiz.questions[qi];
       if (quiz.submitted) {
@@ -2386,6 +2498,7 @@ createApp({
     };
 
     const submitQuiz = (weekObj,subject) => {
+      if (currentRole.value !== 'student') return;   // read-only guard
       const quiz = weekObj.subjects[subject].quiz;
       quiz.score = quiz.questions.filter(q => q.answer === q.correct).length;
       quiz.submitted = true;
@@ -2453,6 +2566,8 @@ createApp({
     };
 
     const startArena = () => {
+      if (currentRole.value === 'guest') return;     // read-only guard
+      _logAccess('Opened Review Arena');
       const pool = arenaPool.value;
       if (!pool.length) return;
       const size = Math.min(arenaState.sessionSize, pool.length);
@@ -2471,6 +2586,7 @@ createApp({
     };
 
     const arenaSelect = (item, oi) => {
+      if (currentRole.value === 'guest') return;     // read-only guard
       if (!item || item.revealed) return;
       item.selectedOpt = oi;
       item.revealed = true;
@@ -2631,10 +2747,13 @@ createApp({
     };
 
     const startWeekQuiz = (weekObj, subject, testMode = false) => {
+      if (currentRole.value === 'guest') return;     // read-only guard
       const quiz = weekObj.subjects[subject].quiz;
       const label = subject === 'history' ? 'History' : 'Biology';
       const picked = _pickFromBank(quiz, 10);
       if (!picked.length) return;
+      // Log quiz open (before state mutation so role is still current)
+      _logAccess('Opened ' + label + ' Quiz · Week ' + weekObj.weekNum);
       weekQuizState._weekRef = weekObj;
       weekQuizState._subject = subject;
       weekQuizState.subjectLabel = label;
@@ -2653,6 +2772,7 @@ createApp({
 
     const weekQuizAnswer = (oi) => {
       if (weekQuizState.revealed) return;
+      if (currentRole.value === 'guest') return;     // read-only guard
       const q = weekQuizState.queue[weekQuizState.current];
       const correct = oi === q.correct;
       weekQuizState.revealed = true;
@@ -2711,6 +2831,8 @@ createApp({
           quiz.sessionTotal = weekQuizState.sessionTotal;
           // Stamp this session's ID so next session can apply the cooldown
           quiz.lastSessionId = weekQuizState._sessionId;
+          // Audit log
+          _logAccess('Submitted ' + weekQuizState.subjectLabel + ' Quiz · Week ' + weekQuizState._weekRef.weekNum + ' · Score ' + weekQuizState.sessionScore + '/' + weekQuizState.sessionTotal);
           quizResults.push(_resultEntry);
         }
         weekQuizState.phase = 'finished';
@@ -3445,6 +3567,9 @@ createApp({
     }, {deep:true});
 
     onMounted(() => {
+      // Audit: log every page load with current role (even if locked)
+      _logAccess('Page Loaded', currentRole.value !== 'locked' ? currentRole.value : 'unauthenticated');
+
       const FALLBACK_KEYS = ['isadora_homeschool_v5', 'isadora_homeschool_v4', 'isadora-v3', 'isadora-v2'];
       let loaded = false;
 
@@ -3657,6 +3782,7 @@ createApp({
     return {
       activeTab, activeSubjTab, saving, syncStatus, currentWeek, sec, tabs,
       currentRole, showPinModal, pinInput, pinError, targetRole, switchRole, confirmPin, cancelPin,
+      accessLogs, showAccessLogs, fetchAccessLogs,
       showPrintDialog, triggerPrint,
       lpMeetings, yearAtGlance, electives, annualGoals, quizResults, books, weeks,
       cw, completedWeeks, dashStats,
