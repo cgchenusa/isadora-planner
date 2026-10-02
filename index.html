@@ -2549,23 +2549,85 @@ createApp({
       sessionScore: 0,
       sessionTotal: 0,
       coinsEarned: 0,
-      adminTestMode: false    // true = preview; no saves, no coins, no streak updates
+      adminTestMode: false,   // true = admin sandbox; writes to adminTestData only
+      _sessionId: ''          // unique per quiz start; used for anti-fatigue cooldown
     });
 
-    const _pickFromBank = (quiz, count) => {
+    // ── 3-Tier Question Selection ─────────────────────────────────────
+    // Picks `count` questions (default 10) from the quiz bank using:
+    //   Tier 1 (up to 3)  — Focus: streak===0 (mistakes / never-correct)
+    //   Tier 2 (5)        — Fresh: sorted by timesAnswered ascending (least-seen first)
+    //   Tier 3 (2)        — Review: random from remaining pool (even mastered Qs)
+    //
+    // Anti-fatigue cooldown:
+    //   Questions correctly answered in the IMMEDIATELY PRECEDING session carry
+    //   `lastSessionSeen === quiz.lastSessionId`. Those questions are excluded
+    //   from all three tiers unless the eligible pool shrinks below `count`,
+    //   in which case cooled-off questions are added back to fill the gap.
+    //
+    // Final 10 are shuffled so tier order isn't visible to the student.
+    const _pickFromBank = (quiz, count = 10) => {
       const bank = (quiz.questionBank && quiz.questionBank.length > 0)
         ? quiz.questionBank : quiz.questions;
       if (!bank || !bank.length) return [];
-      const shuffled = [...bank].sort((a, b) => {
-        // Prioritise questions with low streak or never answered
-        const wa = (a.timesAnswered || 0) === 0 ? 3
-          : (a.streak || 0) === 0 ? 4 : 1;
-        const wb = (b.timesAnswered || 0) === 0 ? 3
-          : (b.streak || 0) === 0 ? 4 : 1;
-        // Add randomness
-        return (wb - wa) + (Math.random() - 0.5) * 2;
-      });
-      return shuffled.slice(0, count).map(q => Object.assign({}, q));
+
+      const lastSid = quiz.lastSessionId || null;
+
+      // Partition: cooled-off (just seen correctly) vs eligible
+      const cooled = [];
+      const eligible = [];
+      for (const q of bank) {
+        if (lastSid && q.lastSessionSeen === lastSid) {
+          cooled.push(q);
+        } else {
+          eligible.push(q);
+        }
+      }
+
+      // Helper: random shuffle (Fisher-Yates)
+      const _shuffle = (arr) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      };
+
+      // ── Tier 1: Focus — mistakes / never-correct (up to 3) ───────────
+      // streak===0 AND timesAnswered>0 → past mistake
+      // timesAnswered===0              → never seen (also goes to Tier 2, but
+      //                                  we let Tier 1 claim mistake Qs first)
+      const tier1Pool = _shuffle(eligible.filter(q =>
+        (q.timesAnswered || 0) > 0 && (q.streak || 0) === 0
+      ));
+      const t1Count = Math.min(3, tier1Pool.length);
+      const tier1 = tier1Pool.slice(0, t1Count);
+      const usedQs = new Set(tier1.map(q => q.q));
+
+      // ── Tier 2: Fresh — least-seen questions (5) ─────────────────────
+      const tier2Pool = eligible
+        .filter(q => !usedQs.has(q.q))
+        .sort((a, b) => (a.timesAnswered || 0) - (b.timesAnswered || 0));
+      const t2Count = Math.min(5, tier2Pool.length);
+      const tier2 = tier2Pool.slice(0, t2Count);
+      tier2.forEach(q => usedQs.add(q.q));
+
+      // ── Tier 3: Review — random from remaining eligible pool (2) ──────
+      const tier3Pool = _shuffle(eligible.filter(q => !usedQs.has(q.q)));
+      const t3Count = Math.min(2, tier3Pool.length);
+      const tier3 = tier3Pool.slice(0, t3Count);
+      tier3.forEach(q => usedQs.add(q.q));
+
+      // ── Collect and fill gap with cooled-off questions if needed ──────
+      let selected = [...tier1, ...tier2, ...tier3];
+      if (selected.length < count && cooled.length) {
+        // Exhaust eligible first; fall back to cooled-off pool
+        const extra = _shuffle(cooled).slice(0, count - selected.length);
+        selected = selected.concat(extra);
+      }
+
+      // ── Final shuffle so tiers aren't visible to student ─────────────
+      return _shuffle(selected).slice(0, count).map(q => Object.assign({}, q));
     };
 
     const startWeekQuiz = (weekObj, subject, testMode = false) => {
@@ -2585,6 +2647,7 @@ createApp({
       weekQuizState.sessionTotal = picked.length;
       weekQuizState.coinsEarned = 0;
       weekQuizState.adminTestMode = testMode;
+      weekQuizState._sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
       weekQuizState.phase = 'playing';
     };
 
@@ -2614,7 +2677,7 @@ createApp({
         const origBank = weekQuizState._weekRef.subjects[weekQuizState._subject].quiz;
         const allQ = origBank.questionBank || origBank.questions;
         const orig = allQ.find(x => x.q === q.q);
-        if (orig) { orig.streak = (orig.streak||0)+1; orig.timesAnswered = (orig.timesAnswered||0)+1; orig.lastReviewed = new Date().toISOString(); }
+        if (orig) { orig.streak = (orig.streak||0)+1; orig.timesAnswered = (orig.timesAnswered||0)+1; orig.lastReviewed = new Date().toISOString(); orig.lastSessionSeen = weekQuizState._sessionId; }
       } else {
         // Push a copy to end of queue for retry
         weekQuizState.queue.push(Object.assign({}, q, {_retry: true}));
@@ -2646,6 +2709,8 @@ createApp({
           const quiz = weekQuizState._weekRef.subjects[weekQuizState._subject].quiz;
           quiz.lastScore = weekQuizState.sessionScore;
           quiz.sessionTotal = weekQuizState.sessionTotal;
+          // Stamp this session's ID so next session can apply the cooldown
+          quiz.lastSessionId = weekQuizState._sessionId;
           quizResults.push(_resultEntry);
         }
         weekQuizState.phase = 'finished';
@@ -2656,8 +2721,9 @@ createApp({
       const quiz = weekObj.subjects[subject].quiz;
       quiz.lastScore = null;
       quiz.sessionTotal = null;
+      quiz.lastSessionId = null;
       const bank = quiz.questionBank || quiz.questions;
-      (bank||[]).forEach(q => { q.streak=0; q.timesAnswered=0; q.lastReviewed=null; });
+      (bank||[]).forEach(q => { q.streak=0; q.timesAnswered=0; q.lastReviewed=null; q.lastSessionSeen=null; });
     };
 
     const wqOptClass = (oi) => {
