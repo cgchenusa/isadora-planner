@@ -170,7 +170,7 @@
             👁 Guest / Teacher <span style="font-size:0.72rem;font-weight:500;color:#059669">(Read-Only)</span>
           </button>
           <div style="margin-top:0.35rem;font-size:0.68rem;color:#6b7280;text-align:center;display:flex;align-items:center;justify-content:center;gap:0.3rem">
-            <span>🔐</span> Acessos neste modo são registrados pelo administrador
+            <span>🔐</span> Access in this mode is logged by the administrator
           </div>
         </div>
         <button @click="switchRole('parent')"
@@ -243,7 +243,7 @@
     <div v-if="currentRole==='guest'"
       style="background:linear-gradient(90deg,#ecfdf5,#f0fdf4);border-top:1px solid #a7f3d0;padding:0.3rem 1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem">
       <span style="font-size:0.8rem">🔐</span>
-      <span style="font-size:0.72rem;color:#065f46;font-weight:600">Modo Guest / Teacher — somente leitura · Este acesso está sendo registrado pelo administrador</span>
+      <span style="font-size:0.72rem;color:#065f46;font-weight:600">Guest / Teacher Mode — read-only · This session is being logged by the administrator</span>
     </div>
   </header>
 
