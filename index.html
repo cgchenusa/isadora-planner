@@ -650,43 +650,48 @@
             </div>
           </div>
 
-          <!-- History Quiz -->
+          <!-- History Quiz (Flashcard Mode) -->
           <div style="background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;margin-bottom:0.75rem;overflow:hidden">
             <div class="section-hdr" @click="toggle('hquiz'+currentWeek)">
               <span style="font-weight:700;color:#374151;font-size:0.92rem;display:flex;align-items:center;gap:0.5rem">
                 🧩 History Retention Quiz
-                <span v-if="cw.subjects.history.quiz.submitted" style="font-size:0.7rem;padding:0.15rem 0.6rem;background:#d1fae5;color:#065f46;border-radius:999px;font-weight:700">
-                  {{cw.subjects.history.quiz.score}}/{{cw.subjects.history.quiz.questions.length}} scored
+                <span v-if="cw.subjects.history.quiz.lastScore!=null" style="font-size:0.7rem;padding:0.15rem 0.6rem;background:#d1fae5;color:#065f46;border-radius:999px;font-weight:700">
+                  Last: {{cw.subjects.history.quiz.lastScore}}/{{cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length}} ✔
                 </span>
               </span>
               <span style="color:#9ca3af;font-size:0.75rem">{{isOpen('hquiz'+currentWeek)?'▲':'▼'}}</span>
             </div>
-            <div v-if="isOpen('hquiz'+currentWeek)" style="padding:0 1.25rem 1.25rem;border-top:1px solid #f9fafb">
-              <div style="margin-top:0.875rem;display:flex;flex-direction:column;gap:1rem">
-                <div v-for="(q,qi) in cw.subjects.history.quiz.questions" :key="qi" style="background:#f9fafb;border-radius:0.75rem;padding:0.875rem">
-                  <p style="font-size:0.875rem;font-weight:700;color:#1f2937;margin:0 0 0.6rem">{{qi+1}}. {{q.q}}</p>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
-                    <button v-for="(opt,oi) in q.opts" :key="oi" @click="selectAns(cw.subjects.history.quiz,qi,oi)" :class="quizClass(cw.subjects.history.quiz,qi,oi)" :disabled="currentRole==='guest'" class="q-opt">
-                      <span style="font-weight:700">{{['A','B','C','D'][oi]}}.</span> {{opt}}
-                    </button>
-                  </div>
-                  <div v-if="cw.subjects.history.quiz.submitted && q.explain" :class="q.answer===q.correct?'explain-box-correct':'explain-box-wrong'">
-                    <span style="font-size:0.78rem;font-weight:700;margin-right:0.4rem">{{q.answer===q.correct?'✅':'❌'}}</span>
-                    <span style="font-size:0.8rem;color:#374151;line-height:1.5">{{q.explain}}</span>
-                  </div>
+            <div v-if="isOpen('hquiz'+currentWeek)" style="padding:1rem 1.25rem 1.25rem;border-top:1px solid #f9fafb">
+              <!-- Admin test-mode notice -->
+              <div v-if="currentRole==='admin'" style="margin-bottom:0.75rem;padding:0.5rem 0.875rem;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:0.625rem;font-size:0.78rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:0.4rem">
+                🧪 Admin Test Mode — previewing will NOT save progress, coins, or streaks
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+                <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
+                  <span style="font-weight:700;color:#7c3aed">{{(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
                 </div>
-                <div v-if="!cw.subjects.history.quiz.submitted" style="display:flex;align-items:center;gap:0.75rem">
-                  <button @click="submitQuiz(cw,'history')" :disabled="!allAnswered(cw.subjects.history.quiz)"
-                    :style="allAnswered(cw.subjects.history.quiz)?'background:#7c3aed;color:#fff;cursor:pointer':'background:#e5e7eb;color:#9ca3af;cursor:not-allowed'"
-                    style="padding:0.5rem 1.25rem;border:none;border-radius:0.5rem;font-size:0.85rem;font-weight:700">Submit Quiz</button>
-                  <span v-if="!allAnswered(cw.subjects.history.quiz)" style="font-size:0.75rem;color:#9ca3af">Answer all questions to submit</span>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                  <!-- Admin buttons: Preview + Reset -->
+                  <button v-if="currentRole==='admin'" @click="resetWeekQuiz(cw,'history')"
+                    style="padding:0.45rem 0.875rem;background:#fff7ed;color:#92400e;border:1.5px solid #fde68a;border-radius:0.75rem;font-size:0.8rem;font-weight:700;cursor:pointer"
+                    title="Clear last score and reset all streak/timesAnswered counters for this quiz">
+                    🔄 Reset Quiz
+                  </button>
+                  <button v-if="currentRole==='admin'" @click="startWeekQuiz(cw,'history',true)"
+                    style="padding:0.45rem 1.1rem;background:#fffbeb;color:#92400e;border:2px solid #f59e0b;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #f59e0b22"
+                    title="Test the quiz algorithm — no progress saved">
+                    🧪 Preview Quiz
+                  </button>
+                  <!-- Student button -->
+                  <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'history',false)"
+                    style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #7c3aed33">
+                    🚀 Start Quiz
+                  </button>
                 </div>
-                <div v-else style="display:flex;align-items:center;gap:1rem">
-                  <span :style="'font-size:1.1rem;font-weight:800;'+(cw.subjects.history.quiz.score>=4?'color:#059669':cw.subjects.history.quiz.score>=3?'color:#d97706':'color:#dc2626')">
-                    Score: {{cw.subjects.history.quiz.score}}/{{cw.subjects.history.quiz.questions.length}} ({{Math.round(cw.subjects.history.quiz.score/cw.subjects.history.quiz.questions.length*100)}}%)
-                  </span>
-                  <button v-if="currentRole==='admin'" @click="resetQuiz(cw,'history')" style="font-size:0.8rem;padding:0.35rem 0.875rem;background:#f3f4f6;color:#4b5563;border:none;border-radius:0.5rem;cursor:pointer">🔄 Retake</button>
-                </div>
+              </div>
+              <div v-if="cw.subjects.history.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#f5f3ff;border-radius:0.625rem;font-size:0.8rem;color:#5b21b6;display:flex;align-items:center;gap:0.5rem">
+                <span>🏆</span> Last session: <strong>{{cw.subjects.history.quiz.lastScore}}/{{cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length}}</strong>
+                ({{Math.round(cw.subjects.history.quiz.lastScore/(cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length)*100)}}%) · Coins earned this week 🪙
               </div>
             </div>
           </div>
@@ -872,43 +877,48 @@
             </div>
           </div>
 
-          <!-- Biology Quiz -->
+          <!-- Biology Quiz (Flashcard Mode) -->
           <div style="background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;margin-bottom:0.75rem;overflow:hidden">
             <div class="section-hdr" @click="toggle('bquiz'+currentWeek)">
               <span style="font-weight:700;color:#374151;font-size:0.92rem;display:flex;align-items:center;gap:0.5rem">
                 🧩 Biology Retention Quiz
-                <span v-if="cw.subjects.biology.quiz.submitted" style="font-size:0.7rem;padding:0.15rem 0.6rem;background:#d1fae5;color:#065f46;border-radius:999px;font-weight:700">
-                  {{cw.subjects.biology.quiz.score}}/{{cw.subjects.biology.quiz.questions.length}} scored
+                <span v-if="cw.subjects.biology.quiz.lastScore!=null" style="font-size:0.7rem;padding:0.15rem 0.6rem;background:#dbeafe;color:#1e40af;border-radius:999px;font-weight:700">
+                  Last: {{cw.subjects.biology.quiz.lastScore}}/{{cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length}} ✔
                 </span>
               </span>
               <span style="color:#9ca3af;font-size:0.75rem">{{isOpen('bquiz'+currentWeek)?'▲':'▼'}}</span>
             </div>
-            <div v-if="isOpen('bquiz'+currentWeek)" style="padding:0 1.25rem 1.25rem;border-top:1px solid #f9fafb">
-              <div style="margin-top:0.875rem;display:flex;flex-direction:column;gap:1rem">
-                <div v-for="(q,qi) in cw.subjects.biology.quiz.questions" :key="qi" style="background:#f0f9ff;border-radius:0.75rem;padding:0.875rem;border:1px solid #bae6fd">
-                  <p style="font-size:0.875rem;font-weight:700;color:#0c4a6e;margin:0 0 0.6rem">{{qi+1}}. {{q.q}}</p>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
-                    <button v-for="(opt,oi) in q.opts" :key="oi" @click="selectAns(cw.subjects.biology.quiz,qi,oi)" :class="quizClass(cw.subjects.biology.quiz,qi,oi)" :disabled="currentRole==='guest'" class="q-opt">
-                      <span style="font-weight:700">{{['A','B','C','D'][oi]}}.</span> {{opt}}
-                    </button>
-                  </div>
-                  <div v-if="cw.subjects.biology.quiz.submitted && q.explain" :class="q.answer===q.correct?'explain-box-correct':'explain-box-wrong'">
-                    <span style="font-size:0.78rem;font-weight:700;margin-right:0.4rem">{{q.answer===q.correct?'✅':'❌'}}</span>
-                    <span style="font-size:0.8rem;color:#374151;line-height:1.5">{{q.explain}}</span>
-                  </div>
+            <div v-if="isOpen('bquiz'+currentWeek)" style="padding:1rem 1.25rem 1.25rem;border-top:1px solid #f9fafb">
+              <!-- Admin test-mode notice -->
+              <div v-if="currentRole==='admin'" style="margin-bottom:0.75rem;padding:0.5rem 0.875rem;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:0.625rem;font-size:0.78rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:0.4rem">
+                🧪 Admin Test Mode — previewing will NOT save progress, coins, or streaks
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+                <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
+                  <span style="font-weight:700;color:#2563eb">{{(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
                 </div>
-                <div v-if="!cw.subjects.biology.quiz.submitted" style="display:flex;align-items:center;gap:0.75rem">
-                  <button @click="submitQuiz(cw,'biology')" :disabled="!allAnswered(cw.subjects.biology.quiz)"
-                    :style="allAnswered(cw.subjects.biology.quiz)?'background:#2563eb;color:#fff;cursor:pointer':'background:#e5e7eb;color:#9ca3af;cursor:not-allowed'"
-                    style="padding:0.5rem 1.25rem;border:none;border-radius:0.5rem;font-size:0.85rem;font-weight:700">Submit Quiz</button>
-                  <span v-if="!allAnswered(cw.subjects.biology.quiz)" style="font-size:0.75rem;color:#9ca3af">Answer all questions to submit</span>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                  <!-- Admin buttons: Preview + Reset -->
+                  <button v-if="currentRole==='admin'" @click="resetWeekQuiz(cw,'biology')"
+                    style="padding:0.45rem 0.875rem;background:#fff7ed;color:#92400e;border:1.5px solid #fde68a;border-radius:0.75rem;font-size:0.8rem;font-weight:700;cursor:pointer"
+                    title="Clear last score and reset all streak/timesAnswered counters for this quiz">
+                    🔄 Reset Quiz
+                  </button>
+                  <button v-if="currentRole==='admin'" @click="startWeekQuiz(cw,'biology',true)"
+                    style="padding:0.45rem 1.1rem;background:#fffbeb;color:#92400e;border:2px solid #f59e0b;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #f59e0b22"
+                    title="Test the quiz algorithm — no progress saved">
+                    🧪 Preview Quiz
+                  </button>
+                  <!-- Student button -->
+                  <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'biology',false)"
+                    style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #2563eb33">
+                    🚀 Start Quiz
+                  </button>
                 </div>
-                <div v-else style="display:flex;align-items:center;gap:1rem">
-                  <span :style="'font-size:1.1rem;font-weight:800;'+(cw.subjects.biology.quiz.score>=4?'color:#059669':cw.subjects.biology.quiz.score>=3?'color:#d97706':'color:#dc2626')">
-                    Score: {{cw.subjects.biology.quiz.score}}/{{cw.subjects.biology.quiz.questions.length}} ({{Math.round(cw.subjects.biology.quiz.score/cw.subjects.biology.quiz.questions.length*100)}}%)
-                  </span>
-                  <button v-if="currentRole==='admin'" @click="resetQuiz(cw,'biology')" style="font-size:0.8rem;padding:0.35rem 0.875rem;background:#f3f4f6;color:#4b5563;border:none;border-radius:0.5rem;cursor:pointer">🔄 Retake</button>
-                </div>
+              </div>
+              <div v-if="cw.subjects.biology.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#eff6ff;border-radius:0.625rem;font-size:0.8rem;color:#1e40af;display:flex;align-items:center;gap:0.5rem">
+                <span>🏆</span> Last session: <strong>{{cw.subjects.biology.quiz.lastScore}}/{{cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length}}</strong>
+                ({{Math.round(cw.subjects.biology.quiz.lastScore/(cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length)*100)}}%) · Coins earned this week 🪙
               </div>
             </div>
           </div>
@@ -1668,6 +1678,132 @@
       </div>
     </div>
 
+
+  <!-- ====== WEEK QUIZ OVERLAY (Flashcard Mode) ====== -->
+  <div v-if="weekQuizState.phase!=='idle'" class="wq-overlay no-print" @click.self="weekQuizState.phase==='finished'&&(weekQuizState.phase='idle')">
+    <div class="wq-card">
+
+      <!-- Admin test-mode banner (above everything) -->
+      <div v-if="weekQuizState.adminTestMode" style="background:#f59e0b;padding:0.4rem 1.25rem;display:flex;align-items:center;gap:0.5rem">
+        <span style="font-size:0.8rem;font-weight:800;color:#1f2937">🧪 Admin Preview — No progress, coins, or streaks will be saved</span>
+      </div>
+
+      <!-- Header bar -->
+      <div :style="weekQuizState.adminTestMode ? 'background:linear-gradient(135deg,#92400e,#b45309)' : 'background:linear-gradient(135deg,#7c3aed,#2563eb)'" style="padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between">
+        <div style="color:#fff;font-size:0.82rem;font-weight:700;opacity:0.9">
+          <span v-if="weekQuizState.phase==='playing'">
+            {{weekQuizState.subjectLabel}} Quiz · Question {{weekQuizState.current+1}} of {{weekQuizState.queue.length}}
+          </span>
+          <span v-else>{{weekQuizState.adminTestMode ? '🧪 Preview Complete' : '🎉 Quiz Complete!'}}</span>
+        </div>
+        <!-- Dragon widget (greyed in test mode) -->
+        <div style="display:flex;align-items:center;gap:0.5rem" :style="weekQuizState.adminTestMode ? 'opacity:0.45' : ''">
+          <span v-if="dragonStage==='egg'" class="dragon-egg-anim" style="font-size:1.6rem" title="Mysterious Egg — earn coins to hatch!">🥚</span>
+          <span v-else-if="dragonStage==='baby'" class="dragon-baby-anim" style="font-size:1.6rem" title="Baby Dragon!">🐣</span>
+          <span v-else-if="dragonStage==='winged'" class="dragon-winged-anim" style="font-size:1.6rem" title="Winged Dragon!">🐉</span>
+          <span v-else class="dragon-winged-anim" style="font-size:1.6rem" title="Armored Dragon!">🐲</span>
+          <span style="color:#fde68a;font-size:0.85rem;font-weight:800">{{totalCoins}} 🪙</span>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div v-if="weekQuizState.phase==='playing'" style="height:4px;background:#e5e7eb">
+        <div :style="'height:100%;background:linear-gradient(90deg,#7c3aed,#2563eb);transition:width 0.4s;width:'+(weekQuizState.current/weekQuizState.queue.length*100)+'%'"></div>
+      </div>
+
+      <!-- ---- PLAYING PHASE ---- -->
+      <div v-if="weekQuizState.phase==='playing'" style="padding:1.5rem 1.25rem 1.25rem">
+        <!-- Question -->
+        <div style="font-size:1rem;font-weight:700;color:#1f2937;line-height:1.5;margin-bottom:1.25rem">
+          {{weekQuizState.queue[weekQuizState.current].q}}
+        </div>
+
+        <!-- Options -->
+        <div style="display:flex;flex-direction:column;gap:0">
+          <button v-for="(opt,oi) in weekQuizState.queue[weekQuizState.current].opts" :key="oi"
+            @click="weekQuizAnswer(oi)"
+            :disabled="weekQuizState.revealed"
+            :class="wqOptClass(oi)"
+            class="wq-fc-opt">
+            <span style="font-weight:800;margin-right:0.4rem">{{['A','B','C','D'][oi]}}.</span>{{opt}}
+          </button>
+        </div>
+
+        <!-- Feedback -->
+        <div v-if="weekQuizState.revealed" style="margin-top:1rem">
+          <div :style="'padding:0.875rem;border-radius:0.75rem;font-size:0.85rem;line-height:1.6;'+(weekQuizState.lastCorrect?'background:#d1fae5;border:1.5px solid #059669;color:#065f46':'background:#fee2e2;border:1.5px solid #dc2626;color:#991b1b')">
+            <div style="font-weight:800;margin-bottom:0.3rem">{{weekQuizState.lastCorrect ? (weekQuizState.adminTestMode ? '✅ Correct! (preview — coins not counted)' : '✅ Correct! +10 coins 🪙') : '❌ Not quite — the correct answer is highlighted above.'}}</div>
+            <div v-if="weekQuizState.queue[weekQuizState.current].explain">{{weekQuizState.queue[weekQuizState.current].explain}}</div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:0.875rem">
+            <button @click="weekQuizNext" class="wq-next-btn">
+              {{weekQuizState.current < weekQuizState.queue.length-1 ? 'Next →' : 'See Results →'}}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- SUMMARY PHASE ---- -->
+      <div v-if="weekQuizState.phase==='finished'" style="padding:1.5rem 1.25rem 2rem;text-align:center">
+        <!-- Dragon celebration -->
+        <div style="font-size:4rem;margin-bottom:0.5rem">
+          <span v-if="dragonStage==='egg'" class="dragon-egg-anim">🥚</span>
+          <span v-else-if="dragonStage==='baby'" class="dragon-baby-anim">🐣</span>
+          <span v-else-if="dragonStage==='winged'" class="dragon-winged-anim">🐉</span>
+          <span v-else class="dragon-winged-anim">🐲</span>
+        </div>
+        <div style="font-size:1.3rem;font-weight:800;color:#1f2937;margin-bottom:0.25rem">
+          {{weekQuizState.adminTestMode ? '🧪 Preview Results' : weekQuizState.sessionScore >= weekQuizState.sessionTotal*0.9 ? 'Amazing work, Isadora! 🌟' : weekQuizState.sessionScore >= weekQuizState.sessionTotal*0.7 ? 'Great job! Keep it up! 💪' : 'Good effort! Practice makes perfect! 📚'}}
+        </div>
+        <div style="font-size:0.9rem;color:#6b7280;margin-bottom:0.5rem">{{weekQuizState.subjectLabel}} Quiz</div>
+        <div v-if="weekQuizState.adminTestMode" style="margin-bottom:1rem;padding:0.5rem 0.875rem;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:0.625rem;font-size:0.8rem;font-weight:700;color:#92400e">
+          🧪 Admin preview complete — no results, coins, or streaks were saved
+        </div>
+        <div v-if="!weekQuizState.adminTestMode" style="margin-bottom:1rem"></div>
+
+        <!-- Stats grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:1.5rem">
+          <div style="background:#f5f3ff;border-radius:1rem;padding:1rem 0.5rem">
+            <div style="font-size:1.6rem;font-weight:900;color:#7c3aed">{{weekQuizState.sessionScore}}/{{weekQuizState.sessionTotal}}</div>
+            <div style="font-size:0.72rem;color:#7c3aed;font-weight:700;text-transform:uppercase">Score</div>
+          </div>
+          <div style="background:#fef3c7;border-radius:1rem;padding:1rem 0.5rem" :style="weekQuizState.adminTestMode?'opacity:0.45':''">
+            <div style="font-size:1.6rem;font-weight:900;color:#b45309">{{weekQuizState.adminTestMode ? '—' : weekQuizState.coinsEarned+' 🪙'}}</div>
+            <div style="font-size:0.72rem;color:#b45309;font-weight:700;text-transform:uppercase">{{weekQuizState.adminTestMode ? 'No Coins' : 'Coins Earned'}}</div>
+          </div>
+          <div style="background:#d1fae5;border-radius:1rem;padding:1rem 0.5rem">
+            <div style="font-size:1.6rem;font-weight:900;color:#059669">{{Math.round(weekQuizState.sessionScore/weekQuizState.sessionTotal*100)}}%</div>
+            <div style="font-size:0.72rem;color:#059669;font-weight:700;text-transform:uppercase">Accuracy</div>
+          </div>
+        </div>
+
+        <!-- Dragon status -->
+        <div style="background:#f9fafb;border-radius:1rem;padding:0.875rem;margin-bottom:1.25rem;font-size:0.85rem;color:#374151">
+          <span style="font-weight:700">Dragon Status:</span>
+          <span v-if="dragonStage==='egg'"> 🥚 Mysterious Egg · {{20-totalCoins}} more coins to hatch!</span>
+          <span v-else-if="dragonStage==='baby'"> 🐣 Baby Dragon is growing! · {{50-totalCoins}} coins to evolve</span>
+          <span v-else-if="dragonStage==='winged'"> 🐉 Winged Dragon soars! · {{100-totalCoins}} coins to max power</span>
+          <span v-else> 🐲 Armored Dragon — fully evolved! You rock!</span>
+          <div style="margin-top:0.5rem;background:#e5e7eb;border-radius:999px;height:8px;overflow:hidden">
+            <div :style="'height:100%;background:linear-gradient(90deg,#f59e0b,#7c3aed);border-radius:999px;width:'+ Math.min(100,(totalCoins/100*100)) +'%'"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;justify-content:center">
+          <button @click="startWeekQuiz(weekQuizState._weekRef, weekQuizState._subject, weekQuizState.adminTestMode)"
+            style="padding:0.6rem 1.25rem;background:#f3f4f6;color:#374151;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer">
+            🔄 Retry
+          </button>
+          <button @click="weekQuizState.phase='idle'"
+            style="padding:0.6rem 1.5rem;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px #7c3aed44">
+            Done ✓
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   </main>
 
   <!-- ====== PASTE JSON MODAL ====== -->
@@ -2301,6 +2437,141 @@ createApp({
       if (oi === item.qRef.correct) return 'q-correct';
       if (oi === item.selectedOpt && item.selectedOpt !== item.qRef.correct) return 'q-wrong';
       return 'q-dim';
+    };
+
+    // ===== WEEK QUIZ (Flashcard + Dragon Hatchery) =====
+
+    const totalCoins = Vue.ref(0);
+
+    const dragonStage = Vue.computed(() => {
+      const c = totalCoins.value;
+      if (c >= 100) return 'armored';
+      if (c >= 50)  return 'winged';
+      if (c >= 20)  return 'baby';
+      return 'egg';
+    });
+
+    const weekQuizState = Vue.reactive({
+      phase: 'idle',          // idle | playing | finished
+      _weekRef: null,
+      _subject: '',
+      subjectLabel: '',
+      queue: [],              // question objects in session order
+      current: 0,
+      revealed: false,
+      lastCorrect: false,
+      _selectedOi: null,      // tracks which option student picked (for wrong highlight)
+      sessionScore: 0,
+      sessionTotal: 0,
+      coinsEarned: 0,
+      adminTestMode: false    // true = preview; no saves, no coins, no streak updates
+    });
+
+    const _pickFromBank = (quiz, count) => {
+      const bank = (quiz.questionBank && quiz.questionBank.length > 0)
+        ? quiz.questionBank : quiz.questions;
+      if (!bank || !bank.length) return [];
+      const shuffled = [...bank].sort((a, b) => {
+        // Prioritise questions with low streak or never answered
+        const wa = (a.timesAnswered || 0) === 0 ? 3
+          : (a.streak || 0) === 0 ? 4 : 1;
+        const wb = (b.timesAnswered || 0) === 0 ? 3
+          : (b.streak || 0) === 0 ? 4 : 1;
+        // Add randomness
+        return (wb - wa) + (Math.random() - 0.5) * 2;
+      });
+      return shuffled.slice(0, count).map(q => Object.assign({}, q));
+    };
+
+    const startWeekQuiz = (weekObj, subject, testMode = false) => {
+      const quiz = weekObj.subjects[subject].quiz;
+      const label = subject === 'history' ? 'History' : 'Biology';
+      const picked = _pickFromBank(quiz, 10);
+      if (!picked.length) return;
+      weekQuizState._weekRef = weekObj;
+      weekQuizState._subject = subject;
+      weekQuizState.subjectLabel = label;
+      weekQuizState.queue = picked;
+      weekQuizState.current = 0;
+      weekQuizState.revealed = false;
+      weekQuizState.lastCorrect = false;
+      weekQuizState._selectedOi = null;
+      weekQuizState.sessionScore = 0;
+      weekQuizState.sessionTotal = picked.length;
+      weekQuizState.coinsEarned = 0;
+      weekQuizState.adminTestMode = testMode;
+      weekQuizState.phase = 'playing';
+    };
+
+    const weekQuizAnswer = (oi) => {
+      if (weekQuizState.revealed) return;
+      const q = weekQuizState.queue[weekQuizState.current];
+      const correct = oi === q.correct;
+      weekQuizState.revealed = true;
+      weekQuizState.lastCorrect = correct;
+      weekQuizState._selectedOi = oi;
+      if (weekQuizState.adminTestMode) {
+        // Preview mode: count score for display but save nothing
+        if (correct) { weekQuizState.sessionScore++; weekQuizState.coinsEarned += 10; }
+        else { weekQuizState.queue.push(Object.assign({}, q, {_retry: true})); }
+        return;
+      }
+      if (correct) {
+        weekQuizState.sessionScore++;
+        weekQuizState.coinsEarned += 10;
+        totalCoins.value += 10;
+        // update streak on original question ref
+        const origBank = weekQuizState._weekRef.subjects[weekQuizState._subject].quiz;
+        const allQ = origBank.questionBank || origBank.questions;
+        const orig = allQ.find(x => x.q === q.q);
+        if (orig) { orig.streak = (orig.streak||0)+1; orig.timesAnswered = (orig.timesAnswered||0)+1; orig.lastReviewed = new Date().toISOString(); }
+      } else {
+        // Push a copy to end of queue for retry
+        weekQuizState.queue.push(Object.assign({}, q, {_retry: true}));
+        const orig2 = ((weekQuizState._weekRef.subjects[weekQuizState._subject].quiz.questionBank)||weekQuizState._weekRef.subjects[weekQuizState._subject].quiz.questions||[]).find(x => x.q === q.q);
+        if (orig2) { orig2.streak = 0; orig2.timesAnswered = (orig2.timesAnswered||0)+1; orig2.lastReviewed = new Date().toISOString(); }
+      }
+    };
+
+    const weekQuizNext = () => {
+      if (weekQuizState.current < weekQuizState.queue.length - 1) {
+        weekQuizState.current++;
+        weekQuizState.revealed = false;
+        weekQuizState.lastCorrect = false;
+        weekQuizState._selectedOi = null;
+      } else {
+        if (!weekQuizState.adminTestMode) {
+          // Save results only for real student sessions
+          const quiz = weekQuizState._weekRef.subjects[weekQuizState._subject].quiz;
+          quiz.lastScore = weekQuizState.sessionScore;
+          quiz.sessionTotal = weekQuizState.sessionTotal;
+          quizResults.push({
+            week: weekQuizState._weekRef.weekNum,
+            subject: weekQuizState.subjectLabel,
+            score: weekQuizState.sessionScore,
+            total: weekQuizState.sessionTotal,
+            pct: Math.round(weekQuizState.sessionScore/weekQuizState.sessionTotal*100),
+            date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+          });
+        }
+        weekQuizState.phase = 'finished';
+      }
+    };
+
+    const resetWeekQuiz = (weekObj, subject) => {
+      const quiz = weekObj.subjects[subject].quiz;
+      quiz.lastScore = null;
+      quiz.sessionTotal = null;
+      const bank = quiz.questionBank || quiz.questions;
+      (bank||[]).forEach(q => { q.streak=0; q.timesAnswered=0; q.lastReviewed=null; });
+    };
+
+    const wqOptClass = (oi) => {
+      if (!weekQuizState.revealed) return 'wq-fc-opt';
+      const q = weekQuizState.queue[weekQuizState.current];
+      if (oi === q.correct) return 'wq-fc-opt wq-fc-correct';
+      if (!weekQuizState.lastCorrect && oi === weekQuizState._selectedOi) return 'wq-fc-opt wq-fc-wrong';
+      return 'wq-fc-opt wq-fc-dim';
     };
 
     const ytEmbed = (url) => {
@@ -2963,7 +3234,8 @@ createApp({
       annualGoals: JSON.parse(JSON.stringify(annualGoals)),
       lpMeetings:  JSON.parse(JSON.stringify(lpMeetings)),
       yearAtGlance:JSON.parse(JSON.stringify(yearAtGlance)),
-      electives:   JSON.parse(JSON.stringify(electives))
+      electives:   JSON.parse(JSON.stringify(electives)),
+      totalCoins:  totalCoins.value
     });
     // ── Immediate save (for import/paste actions — no debounce) ────────
     const saveNow = (label, hardOverwrite = false) => {
@@ -2984,7 +3256,7 @@ createApp({
           });
       }
     };
-        watch([weeks,books,quizResults,annualGoals,lpMeetings,yearAtGlance,electives], () => {
+        watch([weeks,books,quizResults,annualGoals,lpMeetings,yearAtGlance,electives,totalCoins], () => {
       // ── Always save to localStorage (immediate fallback) ─────────────
       saving.value = true;
       clearTimeout(saveTimer);
@@ -3058,6 +3330,7 @@ createApp({
         if (Array.isArray(d.lpMeetings))   _deepMerge(lpMeetings, d.lpMeetings);
         if (Array.isArray(d.yearAtGlance)) _deepMerge(yearAtGlance, d.yearAtGlance);
         if (Array.isArray(d.electives))    _deepMerge(electives, d.electives);
+        if (typeof d.totalCoins === 'number') totalCoins.value = d.totalCoins;
         return true;
       };
 
@@ -3230,6 +3503,8 @@ createApp({
       showPasteModal, pasteJsonText, pasteJsonError,
       arenaState, arenaPool, startArena, arenaSelect, arenaNext,
       arenaPoolNeedReview, arenaPoolMastered, arenaQuizClass,
+      totalCoins, dragonStage, weekQuizState,
+      startWeekQuiz, weekQuizAnswer, weekQuizNext, resetWeekQuiz, wqOptClass,
       ytEmbed, lastBackup
     };
   }
