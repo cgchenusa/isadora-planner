@@ -690,37 +690,54 @@
               <span style="color:#9ca3af;font-size:0.75rem">{{isOpen('hquiz'+currentWeek)?'▲':'▼'}}</span>
             </div>
             <div v-if="isOpen('hquiz'+currentWeek)" style="padding:1rem 1.25rem 1.25rem;border-top:1px solid #f9fafb">
-              <!-- Admin test-mode notice -->
-              <div v-if="currentRole==='admin'" style="margin-bottom:0.75rem;padding:0.5rem 0.875rem;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:0.625rem;font-size:0.78rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:0.4rem">
-                🧪 Admin Test Mode — previewing will NOT save progress, coins, or streaks
-              </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
-                <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
-                  <span style="font-weight:700;color:#7c3aed">{{(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
+              <!-- === GUEST VIEW === -->
+              <template v-if="currentRole==='guest'">
+                <div v-if="cw.subjects.history.quiz.lastScore!=null" style="padding:0.75rem 1rem;background:#f5f3ff;border-radius:0.75rem;border:1.5px solid #ede9fe;font-size:0.85rem;color:#5b21b6">
+                  <div style="font-weight:700;margin-bottom:0.4rem">📊 Student's Last Quiz Score</div>
+                  <div style="font-size:1.15rem;font-weight:800">
+                    {{cw.subjects.history.quiz.lastScore}}/{{cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length}}
+                    <span style="font-size:0.82rem;font-weight:400;margin-left:0.4rem">({{Math.round(cw.subjects.history.quiz.lastScore/(cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length)*100)}}%)</span>
+                  </div>
+                  <div style="font-size:0.73rem;color:#7c3aed;margin-top:0.35rem;font-style:italic">👁 Read-only — quiz interaction disabled in Guest / Teacher view</div>
                 </div>
-                <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                  <!-- Admin buttons: Preview + Reset -->
-                  <button v-if="currentRole==='admin'" @click="resetWeekQuiz(cw,'history')"
-                    style="padding:0.45rem 0.875rem;background:#fff7ed;color:#92400e;border:1.5px solid #fde68a;border-radius:0.75rem;font-size:0.8rem;font-weight:700;cursor:pointer"
-                    title="Clear last score and reset all streak/timesAnswered counters for this quiz">
-                    🔄 Reset Quiz
-                  </button>
-                  <button v-if="currentRole==='admin'" @click="startWeekQuiz(cw,'history',true)"
-                    style="padding:0.45rem 1.1rem;background:#fffbeb;color:#92400e;border:2px solid #f59e0b;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #f59e0b22"
-                    title="Test the quiz algorithm — no progress saved">
-                    🧪 Preview Quiz
-                  </button>
-                  <!-- Student button -->
-                  <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'history',false)"
-                    style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #7c3aed33">
-                    🚀 Start Quiz
-                  </button>
+                <div v-else style="padding:0.875rem 1rem;background:#f9fafb;border-radius:0.75rem;border:1.5px dashed #d1d5db;font-size:0.85rem;color:#9ca3af;text-align:center">
+                  📋 Quiz not yet taken by student
                 </div>
-              </div>
-              <div v-if="cw.subjects.history.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#f5f3ff;border-radius:0.625rem;font-size:0.8rem;color:#5b21b6;display:flex;align-items:center;gap:0.5rem">
-                <span>🏆</span> Last session: <strong>{{cw.subjects.history.quiz.lastScore}}/{{cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length}}</strong>
-                ({{Math.round(cw.subjects.history.quiz.lastScore/(cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length)*100)}}%) · Coins earned this week 🪙
-              </div>
+              </template>
+              <!-- === ADMIN / STUDENT VIEW === -->
+              <template v-else>
+                <!-- Admin test-mode notice -->
+                <div v-if="currentRole==='admin'" style="margin-bottom:0.75rem;padding:0.5rem 0.875rem;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:0.625rem;font-size:0.78rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:0.4rem">
+                  🧪 Admin Test Mode — previewing will NOT save progress, coins, or streaks
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+                  <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
+                    <span style="font-weight:700;color:#7c3aed">{{(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
+                  </div>
+                  <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                    <!-- Admin buttons: Preview + Reset -->
+                    <button v-if="currentRole==='admin'" @click="resetWeekQuiz(cw,'history')"
+                      style="padding:0.45rem 0.875rem;background:#fff7ed;color:#92400e;border:1.5px solid #fde68a;border-radius:0.75rem;font-size:0.8rem;font-weight:700;cursor:pointer"
+                      title="Clear last score and reset all streak/timesAnswered counters for this quiz">
+                      🔄 Reset Quiz
+                    </button>
+                    <button v-if="currentRole==='admin'" @click="startWeekQuiz(cw,'history',true)"
+                      style="padding:0.45rem 1.1rem;background:#fffbeb;color:#92400e;border:2px solid #f59e0b;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #f59e0b22"
+                      title="Test the quiz algorithm — no progress saved">
+                      🧪 Preview Quiz
+                    </button>
+                    <!-- Student button -->
+                    <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'history',false)"
+                      style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #7c3aed33">
+                      🚀 Start Quiz
+                    </button>
+                  </div>
+                </div>
+                <div v-if="cw.subjects.history.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#f5f3ff;border-radius:0.625rem;font-size:0.8rem;color:#5b21b6;display:flex;align-items:center;gap:0.5rem">
+                  <span>🏆</span> Last session: <strong>{{cw.subjects.history.quiz.lastScore}}/{{cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length}}</strong>
+                  ({{Math.round(cw.subjects.history.quiz.lastScore/(cw.subjects.history.quiz.sessionTotal||cw.subjects.history.quiz.questions.length)*100)}}%) · Coins earned this week 🪙
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -917,37 +934,54 @@
               <span style="color:#9ca3af;font-size:0.75rem">{{isOpen('bquiz'+currentWeek)?'▲':'▼'}}</span>
             </div>
             <div v-if="isOpen('bquiz'+currentWeek)" style="padding:1rem 1.25rem 1.25rem;border-top:1px solid #f9fafb">
-              <!-- Admin test-mode notice -->
-              <div v-if="currentRole==='admin'" style="margin-bottom:0.75rem;padding:0.5rem 0.875rem;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:0.625rem;font-size:0.78rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:0.4rem">
-                🧪 Admin Test Mode — previewing will NOT save progress, coins, or streaks
-              </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
-                <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
-                  <span style="font-weight:700;color:#2563eb">{{(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
+              <!-- === GUEST VIEW === -->
+              <template v-if="currentRole==='guest'">
+                <div v-if="cw.subjects.biology.quiz.lastScore!=null" style="padding:0.75rem 1rem;background:#eff6ff;border-radius:0.75rem;border:1.5px solid #bfdbfe;font-size:0.85rem;color:#1e40af">
+                  <div style="font-weight:700;margin-bottom:0.4rem">📊 Student's Last Quiz Score</div>
+                  <div style="font-size:1.15rem;font-weight:800">
+                    {{cw.subjects.biology.quiz.lastScore}}/{{cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length}}
+                    <span style="font-size:0.82rem;font-weight:400;margin-left:0.4rem">({{Math.round(cw.subjects.biology.quiz.lastScore/(cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length)*100)}}%)</span>
+                  </div>
+                  <div style="font-size:0.73rem;color:#2563eb;margin-top:0.35rem;font-style:italic">👁 Read-only — quiz interaction disabled in Guest / Teacher view</div>
                 </div>
-                <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                  <!-- Admin buttons: Preview + Reset -->
-                  <button v-if="currentRole==='admin'" @click="resetWeekQuiz(cw,'biology')"
-                    style="padding:0.45rem 0.875rem;background:#fff7ed;color:#92400e;border:1.5px solid #fde68a;border-radius:0.75rem;font-size:0.8rem;font-weight:700;cursor:pointer"
-                    title="Clear last score and reset all streak/timesAnswered counters for this quiz">
-                    🔄 Reset Quiz
-                  </button>
-                  <button v-if="currentRole==='admin'" @click="startWeekQuiz(cw,'biology',true)"
-                    style="padding:0.45rem 1.1rem;background:#fffbeb;color:#92400e;border:2px solid #f59e0b;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #f59e0b22"
-                    title="Test the quiz algorithm — no progress saved">
-                    🧪 Preview Quiz
-                  </button>
-                  <!-- Student button -->
-                  <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'biology',false)"
-                    style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #2563eb33">
-                    🚀 Start Quiz
-                  </button>
+                <div v-else style="padding:0.875rem 1rem;background:#f9fafb;border-radius:0.75rem;border:1.5px dashed #d1d5db;font-size:0.85rem;color:#9ca3af;text-align:center">
+                  📋 Quiz not yet taken by student
                 </div>
-              </div>
-              <div v-if="cw.subjects.biology.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#eff6ff;border-radius:0.625rem;font-size:0.8rem;color:#1e40af;display:flex;align-items:center;gap:0.5rem">
-                <span>🏆</span> Last session: <strong>{{cw.subjects.biology.quiz.lastScore}}/{{cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length}}</strong>
-                ({{Math.round(cw.subjects.biology.quiz.lastScore/(cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length)*100)}}%) · Coins earned this week 🪙
-              </div>
+              </template>
+              <!-- === ADMIN / STUDENT VIEW === -->
+              <template v-else>
+                <!-- Admin test-mode notice -->
+                <div v-if="currentRole==='admin'" style="margin-bottom:0.75rem;padding:0.5rem 0.875rem;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:0.625rem;font-size:0.78rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:0.4rem">
+                  🧪 Admin Test Mode — previewing will NOT save progress, coins, or streaks
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+                  <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
+                    <span style="font-weight:700;color:#2563eb">{{(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
+                  </div>
+                  <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                    <!-- Admin buttons: Preview + Reset -->
+                    <button v-if="currentRole==='admin'" @click="resetWeekQuiz(cw,'biology')"
+                      style="padding:0.45rem 0.875rem;background:#fff7ed;color:#92400e;border:1.5px solid #fde68a;border-radius:0.75rem;font-size:0.8rem;font-weight:700;cursor:pointer"
+                      title="Clear last score and reset all streak/timesAnswered counters for this quiz">
+                      🔄 Reset Quiz
+                    </button>
+                    <button v-if="currentRole==='admin'" @click="startWeekQuiz(cw,'biology',true)"
+                      style="padding:0.45rem 1.1rem;background:#fffbeb;color:#92400e;border:2px solid #f59e0b;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #f59e0b22"
+                      title="Test the quiz algorithm — no progress saved">
+                      🧪 Preview Quiz
+                    </button>
+                    <!-- Student button -->
+                    <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'biology',false)"
+                      style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #2563eb33">
+                      🚀 Start Quiz
+                    </button>
+                  </div>
+                </div>
+                <div v-if="cw.subjects.biology.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#eff6ff;border-radius:0.625rem;font-size:0.8rem;color:#1e40af;display:flex;align-items:center;gap:0.5rem">
+                  <span>🏆</span> Last session: <strong>{{cw.subjects.biology.quiz.lastScore}}/{{cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length}}</strong>
+                  ({{Math.round(cw.subjects.biology.quiz.lastScore/(cw.subjects.biology.quiz.sessionTotal||cw.subjects.biology.quiz.questions.length)*100)}}%) · Coins earned this week 🪙
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -1843,7 +1877,7 @@
         <div style="display:flex;flex-direction:column;gap:0">
           <button v-for="(opt,oi) in weekQuizState.queue[weekQuizState.current].opts" :key="oi"
             @click="weekQuizAnswer(oi)"
-            :disabled="weekQuizState.revealed"
+            :disabled="weekQuizState.revealed || currentRole==='guest'"
             :class="wqOptClass(oi)"
             class="wq-fc-opt">
             <span style="font-weight:800;margin-right:0.4rem">{{['A','B','C','D'][oi]}}.</span>{{opt}}
