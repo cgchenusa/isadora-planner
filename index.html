@@ -995,6 +995,51 @@
               </template>
             </div>
           </div>
+
+          <!-- Biology Review Resources -->
+          <div v-if="cw.subjects.biology.quiz.reviewResources" style="background:#fff;border-radius:0.875rem;border:1px solid #bfdbfe;box-shadow:0 1px 4px #0001;margin-bottom:0.75rem;overflow:hidden">
+            <div class="section-hdr" @click="toggle('brev'+currentWeek)" :style="isOpen('brev'+currentWeek)?'background:linear-gradient(to right,#eff6ff,#fff)':''">
+              <span style="font-weight:700;color:#1e40af;font-size:0.92rem;display:flex;align-items:center;gap:0.6rem">
+                📋 Review Resources
+                <span style="font-size:0.68rem;font-weight:600;color:#1d4ed8;background:#dbeafe;padding:0.1rem 0.5rem;border-radius:999px">Summary · Slides · Video</span>
+              </span>
+              <span style="color:#2563eb;font-size:0.75rem">{{isOpen('brev'+currentWeek)?'▲':'▼'}}</span>
+            </div>
+            <div v-if="isOpen('brev'+currentWeek)" style="padding:0 1.25rem 1.5rem;border-top:1px solid #dbeafe">
+              <div style="margin-top:1rem">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase">📖 Chapter Summary</div>
+                  <button v-if="currentRole==='parent'" @click="toggle('brevsum'+currentWeek)" style="font-size:0.72rem;padding:0.2rem 0.65rem;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:999px;cursor:pointer;font-weight:600">
+                    {{isOpen('brevsum'+currentWeek)?'▲ Close Summary':'📖 Read Full Summary'}}
+                  </button>
+                </div>
+                <div v-if="!isOpen('brevsum'+currentWeek) && cw.subjects.biology.quiz.reviewResources.summary" style="font-size:0.78rem;color:#6b7280;background:#eff6ff;border-radius:0.4rem;padding:0.4rem 0.65rem;border:1px solid #dbeafe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  {{cw.subjects.biology.quiz.reviewResources.summary.substring(0,120)}}…
+                </div>
+                <div v-if="!isOpen('brevsum'+currentWeek) && !cw.subjects.biology.quiz.reviewResources.summary" style="font-size:0.78rem;color:#2563eb;font-style:italic">No summary yet — paste NotebookLM text here.</div>
+                <div v-if="isOpen('brevsum'+currentWeek)">
+                  <textarea v-model="cw.subjects.biology.quiz.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled chapter summary here…"></textarea>
+                </div>
+              </div>
+              <div style="margin-top:1rem">
+                <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🖼 Slide Deck / Presentation</div>
+                <input v-model="cw.subjects.biology.quiz.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
+                <div v-if="cw.subjects.biology.quiz.reviewResources.slidesUrl" style="margin-top:0.35rem">
+                  <a :href="cw.subjects.biology.quiz.reviewResources.slidesUrl" target="_blank" class="rr-link-pill">📑 Study Slides</a>
+                </div>
+              </div>
+              <div style="margin-top:1rem">
+                <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🎥 Review Video / Audio</div>
+                <input v-model="cw.subjects.biology.quiz.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
+                <div v-if="ytEmbed(cw.subjects.biology.quiz.reviewResources.videoUrl)" class="rr-video-wrap">
+                  <iframe :src="ytEmbed(cw.subjects.biology.quiz.reviewResources.videoUrl)" allowfullscreen></iframe>
+                </div>
+                <div v-else-if="cw.subjects.biology.quiz.reviewResources.videoUrl">
+                  <a :href="cw.subjects.biology.quiz.reviewResources.videoUrl" target="_blank" class="rr-link-pill">🎥 Review Video</a>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="print-subj-divider" style="display:none;font-size:0.65rem;font-weight:900;color:#b45309;text-transform:uppercase;letter-spacing:0.1em;padding:0.35rem 0;border-bottom:2px solid #fde68a;margin-bottom:0.75rem;margin-top:1rem">🧮 Math (Beast Academy)</div>
@@ -1214,6 +1259,51 @@
               </div>
             </div>
 
+          </div>
+
+          <!-- ELA Study & Review Resources -->
+          <div v-if="cw.subjects.ela.reviewResources" style="background:#fff;border-radius:0.875rem;border:1px solid #a7f3d0;box-shadow:0 1px 4px #0001;margin-top:0.75rem;overflow:hidden">
+            <div class="section-hdr" @click="toggle('erev'+currentWeek)" :style="isOpen('erev'+currentWeek)?'background:linear-gradient(to right,#f0fdf4,#fff)':''">
+              <span style="font-weight:700;color:#065f46;font-size:0.92rem;display:flex;align-items:center;gap:0.6rem">
+                📋 Study &amp; Review Resources
+                <span style="font-size:0.68rem;font-weight:600;color:#047857;background:#d1fae5;padding:0.1rem 0.5rem;border-radius:999px">Summary · Slides · Video</span>
+              </span>
+              <span style="color:#059669;font-size:0.75rem">{{isOpen('erev'+currentWeek)?'▲':'▼'}}</span>
+            </div>
+            <div v-if="isOpen('erev'+currentWeek)" style="padding:0 1.25rem 1.5rem;border-top:1px solid #a7f3d0">
+              <div style="margin-top:1rem">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#065f46;text-transform:uppercase">📖 Weekly Summary</div>
+                  <button v-if="currentRole==='parent'" @click="toggle('erevsum'+currentWeek)" style="font-size:0.72rem;padding:0.2rem 0.65rem;background:#f0fdf4;color:#065f46;border:1px solid #a7f3d0;border-radius:999px;cursor:pointer;font-weight:600">
+                    {{isOpen('erevsum'+currentWeek)?'▲ Close Summary':'📖 Read Full Summary'}}
+                  </button>
+                </div>
+                <div v-if="!isOpen('erevsum'+currentWeek) && cw.subjects.ela.reviewResources.summary" style="font-size:0.78rem;color:#6b7280;background:#f0fdf4;border-radius:0.4rem;padding:0.4rem 0.65rem;border:1px solid #a7f3d0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  {{cw.subjects.ela.reviewResources.summary.substring(0,120)}}…
+                </div>
+                <div v-if="!isOpen('erevsum'+currentWeek) && !cw.subjects.ela.reviewResources.summary" style="font-size:0.78rem;color:#059669;font-style:italic">No summary yet — paste NotebookLM text here.</div>
+                <div v-if="isOpen('erevsum'+currentWeek)">
+                  <textarea v-model="cw.subjects.ela.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled ELA summary here…"></textarea>
+                </div>
+              </div>
+              <div style="margin-top:1rem">
+                <div style="font-size:0.7rem;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:0.35rem">🖼 Slide Deck / Presentation</div>
+                <input v-model="cw.subjects.ela.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
+                <div v-if="cw.subjects.ela.reviewResources.slidesUrl" style="margin-top:0.35rem">
+                  <a :href="cw.subjects.ela.reviewResources.slidesUrl" target="_blank" class="rr-link-pill">📑 Study Slides</a>
+                </div>
+              </div>
+              <div style="margin-top:1rem">
+                <div style="font-size:0.7rem;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:0.35rem">🎥 Review Video / Audio</div>
+                <input v-model="cw.subjects.ela.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
+                <div v-if="ytEmbed(cw.subjects.ela.reviewResources.videoUrl)" class="rr-video-wrap">
+                  <iframe :src="ytEmbed(cw.subjects.ela.reviewResources.videoUrl)" allowfullscreen></iframe>
+                </div>
+                <div v-else-if="cw.subjects.ela.reviewResources.videoUrl">
+                  <a :href="cw.subjects.ela.reviewResources.videoUrl" target="_blank" class="rr-link-pill">🎥 Review Video</a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2475,6 +2565,7 @@ createApp({
         if (!e.grammar)    e.grammar    = {mctTopic:'',punctuationTopic:'',notes:''};
         if (!e.spelling)   e.spelling   = {lessonRule:'',score:''};
         if (!e.vocabulary) e.vocabulary = {words:'',notes:''};
+        if (!e.reviewResources) e.reviewResources = {summary:'',videoUrl:'',slidesUrl:''};
       }
       if (w && !w.subjects.lp)      w.subjects.lp      = {topic:'',status:'pending',notes:''};
       return w || null;
@@ -3161,6 +3252,7 @@ createApp({
             if (!e.grammar)    e.grammar    = {mctTopic:'',punctuationTopic:'',notes:''};
             if (!e.spelling)   e.spelling   = {lessonRule:'',score:''};
             if (!e.vocabulary) e.vocabulary = {words:'',notes:''};
+            if (!e.reviewResources) e.reviewResources = {summary:'',videoUrl:'',slidesUrl:''};
           }
           // Math v5→v6 migration: add Beast Academy fields
           if (w.subjects.math) {
