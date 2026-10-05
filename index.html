@@ -1373,9 +1373,17 @@
       </div>
 
       <!-- Subject filter pills -->
-      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
-        <span style="font-size:0.7rem;color:#6b7280;align-self:center">Filter:</span>
-        <span v-for="tag in ['science','history','literature','math','free_reading','enrichment','reading','completed']" :key="tag" style="font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:999px;cursor:pointer;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280">{{tag==='science'?'🔬 Science':tag==='history'?'🏛 History':tag==='literature'?'📚 Literature':tag==='math'?'🧠 Math':tag==='free_reading'?'📹 Free Reading':tag==='enrichment'?'✨ Enrichment':tag==='reading'?'🔖 Reading':'✅ Completed'}}</span>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
+        <span style="font-size:0.7rem;color:#6b7280;align-self:center;font-weight:600">Filter:</span>
+        <template v-for="tag in [['all','All',''],['free_reading','Free Reading','📖'],['literature','Literature','📚'],['science','Science','🔬'],['history','History','🏛'],['math','Math','🧮'],['other','Other','🗂']]" :key="tag[0]">
+          <button @click="bookSubjectFilter=tag[0]"
+            :style="bookSubjectFilter===tag[0]
+              ? 'background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700'
+              : 'background:#f9fafb;color:#6b7280;border-color:#e5e7eb'"
+            style="font-size:0.72rem;padding:0.2rem 0.65rem;border-radius:999px;cursor:pointer;border:1px solid;transition:all 0.15s;line-height:1.5">
+            {{tag[1]==='All'?'All':(tag[2]+' '+tag[1]).trim()}}
+          </button>
+        </template>
       </div>
 
       <!-- Book list -->
@@ -1386,7 +1394,7 @@
           <div style="font-size:0.8rem">Click "+ Add Book" to start the reading log</div>
         </div>
 
-        <div v-for="(bk,bi) in books" :key="bi" style="background:#fff;border-radius:0.75rem;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 3px #0001">
+        <div v-for="(bk,bi) in books" :key="bi" v-show="bookSubjectFilter==='all'||bk.subject===bookSubjectFilter" style="background:#fff;border-radius:0.75rem;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 3px #0001">
           <!-- Compact row — always visible -->
           <div @click="toggleBook(bi)" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;cursor:pointer;transition:background 0.15s" :style="expandedBooks[bi]?'background:#f5f3ff':''">
             <!-- Status dot -->
@@ -1394,7 +1402,7 @@
             <!-- Title -->
             <span style="font-weight:700;font-size:0.88rem;color:#1f2937;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{bk.title||'Untitled'}}</span>
             <!-- Subject tag -->
-            <span v-if="bk.subject" :style="'font-size:0.68rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:999px;white-space:nowrap;'+(bk.subject==='science'?'background:#ecfdf5;color:#047857;border-color:#a7f3d0':bk.subject==='history'?'background:#fffbeb;color:#92400e;border-color:#fde68a':bk.subject==='literature'?'background:#eef2ff;color:#4338ca;border-color:#c7d2fe':bk.subject==='math'?'background:#f0f9ff;color:#0369a1;border-color:#bae6fd':bk.subject==='free_reading'?'background:#faf5ff;color:#7c3aed;border-color:#e9d5ff':'background:#f4f4f5;color:#3f3f46;border-color:#d4d4d8')">{{bk.subject==='science'?'🔬':bk.subject==='history'?'🏛':bk.subject==='literature'?'📚':bk.subject==='math'?'🧠':bk.subject==='free_reading'?'📹':'✨'}} {{bk.subject==='free_reading'?'Free Reading':bk.subject==='enrichment'?'Enrichment':bk.subject?bk.subject[0].toUpperCase()+bk.subject.slice(1):''}}</span>
+            <span v-if="bk.subject" :style="'font-size:0.68rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:999px;white-space:nowrap;border:1px solid;'+(bk.subject==='science'?'background:#ecfdf5;color:#047857;border-color:#a7f3d0':bk.subject==='history'?'background:#fffbeb;color:#92400e;border-color:#fde68a':bk.subject==='literature'?'background:#eef2ff;color:#4338ca;border-color:#c7d2fe':bk.subject==='math'?'background:#f0f9ff;color:#0369a1;border-color:#bae6fd':bk.subject==='free_reading'?'background:#faf5ff;color:#7c3aed;border-color:#e9d5ff':'background:#f4f4f5;color:#3f3f46;border-color:#d4d4d8')">{{bk.subject==='science'?'🔬 Science':bk.subject==='history'?'🏛 History':bk.subject==='literature'?'📚 Literature':bk.subject==='math'?'🧮 Math':bk.subject==='free_reading'?'📖 Free Reading':'🗂 Other'}}</span>
             <!-- Stars -->
             <span style="display:flex;gap:0.05rem;flex-shrink:0">
               <span v-for="s in 5" :key="s" style="font-size:0.8rem;" :style="s<=bk.rating?'color:#f59e0b':'color:#d1d5db'">★</span>
@@ -1418,12 +1426,12 @@
                 <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.2rem">Subject / Tag</div>
                 <select v-model="bk.subject" :disabled="currentRole==='guest'" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.3rem 0.5rem">
                   <option value="">— none —</option>
+                  <option value="literature">Literature</option>
                   <option value="science">Science</option>
                   <option value="history">History</option>
-                  <option value="literature">Literature</option>
                   <option value="math">Math</option>
                   <option value="free_reading">Free Reading</option>
-                  <option value="enrichment">Enrichment</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div>
@@ -1485,12 +1493,12 @@
                 <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Subject / Tag</label>
                 <select v-model="newBookDraft.subject" style="width:100%;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.5rem 0.65rem">
                   <option value="">— none —</option>
+                  <option value="literature">Literature</option>
                   <option value="science">Science</option>
                   <option value="history">History</option>
-                  <option value="literature">Literature</option>
                   <option value="math">Math</option>
                   <option value="free_reading">Free Reading</option>
-                  <option value="enrichment">Enrichment</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div>
@@ -3039,6 +3047,7 @@ createApp({
     // Book log reactive state
     const showAddBookModal = Vue.ref(false);
     const newBookDraft = Vue.reactive({title:'',author:'',rating:0,subject:'',status:'reading',review:'',pages:'',totalPages:'',dateAdded:''});
+    const bookSubjectFilter = Vue.ref('all');
     const expandedBooks = Vue.reactive({});
 
     const openAddBookModal = () => {
@@ -3051,6 +3060,8 @@ createApp({
       showAddBookModal.value = false;
     };
     const toggleBook = (bi) => { expandedBooks[bi] = !expandedBooks[bi]; };
+    // Migrate legacy 'enrichment' subject value → 'other'
+    books.forEach(b => { if (b.subject === 'enrichment') b.subject = 'other'; });
     const setRating = (bk, s) => { if (currentRole.value !== 'guest') bk.rating = s; };
     const setDraftRating = (s) => { newBookDraft.rating = s; };
 
@@ -3956,7 +3967,7 @@ createApp({
       allAnswered, selectAns, quizClass, submitQuiz, resetQuiz,
       addEnrich, addBook, addLpMeeting, addWeek, shiftSchedule, generateFullYear, avgScore,
       addGgVideo, openAddBookModal, confirmAddBook, toggleBook, setRating, setDraftRating,
-      showAddBookModal, newBookDraft, expandedBooks,
+      showAddBookModal, newBookDraft, expandedBooks, bookSubjectFilter,
       exportData, importData, applyPastedJson, addWorkImage,
       showPasteModal, pasteJsonText, pasteJsonError,
       arenaState, arenaPool, startArena, arenaSelect, arenaNext,
