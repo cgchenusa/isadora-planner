@@ -46,6 +46,7 @@
     .rr-url-input:focus{border-color:#a78bfa}
     .rr-link-pill{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.75rem;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:0.2rem 0.65rem;text-decoration:none;margin-top:0.35rem;word-break:break-all}
     .rr-link-pill:hover{background:#dbeafe}
+    .rr-audio{width:100%;display:block;border-radius:0.5rem;margin-top:0.35rem;accent-color:#7c3aed}
     .dash-card{background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;padding:1.25rem}
 
     /* ============================================================
@@ -549,6 +550,14 @@
                   <iframe :src="ytEmbed(cw.subjects.history.quiz.reviewResources.videoUrl)" allowfullscreen></iframe>
                 </div>
               </div>
+              <div style="margin-top:1rem">
+                <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
+                <input v-if="currentRole==='parent'" v-model="cw.subjects.history.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
+                <div v-if="cw.subjects.history.quiz.reviewResources.audioUrl" style="margin-top:0.5rem">
+                  <audio controls :src="cw.subjects.history.quiz.reviewResources.audioUrl" class="rr-audio"></audio>
+                </div>
+                <div v-else-if="currentRole!=='parent'" style="font-size:0.78rem;color:#d97706;font-style:italic">No audio linked yet.</div>
+              </div>
             </div>
           </div>
 
@@ -1038,6 +1047,14 @@
                   <a :href="cw.subjects.biology.quiz.reviewResources.videoUrl" target="_blank" class="rr-link-pill">🎥 Review Video</a>
                 </div>
               </div>
+              <div style="margin-top:1rem">
+                <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
+                <input v-if="currentRole==='parent'" v-model="cw.subjects.biology.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
+                <div v-if="cw.subjects.biology.quiz.reviewResources.audioUrl" style="margin-top:0.5rem">
+                  <audio controls :src="cw.subjects.biology.quiz.reviewResources.audioUrl" class="rr-audio"></audio>
+                </div>
+                <div v-else-if="currentRole!=='parent'" style="font-size:0.78rem;color:#2563eb;font-style:italic">No audio linked yet.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1302,6 +1319,14 @@
                 <div v-else-if="cw.subjects.ela.reviewResources.videoUrl">
                   <a :href="cw.subjects.ela.reviewResources.videoUrl" target="_blank" class="rr-link-pill">🎥 Review Video</a>
                 </div>
+              </div>
+              <div style="margin-top:1rem">
+                <div style="font-size:0.7rem;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
+                <input v-if="currentRole==='parent'" v-model="cw.subjects.ela.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
+                <div v-if="cw.subjects.ela.reviewResources.audioUrl" style="margin-top:0.5rem">
+                  <audio controls :src="cw.subjects.ela.reviewResources.audioUrl" class="rr-audio"></audio>
+                </div>
+                <div v-else-if="currentRole!=='parent'" style="font-size:0.78rem;color:#059669;font-style:italic">No audio linked yet.</div>
               </div>
             </div>
           </div>
@@ -2376,7 +2401,7 @@ createApp({
               {q:"What is an artifact?",opts:['A type of cave','An object made or used by humans in the past','A wild plant','A fossilized dinosaur bone'],correct:1,answer:1,explain:"Artifacts are tools, pottery, beads, or weapons made by humans.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()},
               {q:"Where are the famous Lascaux cave paintings located?",opts:['Egypt','Spain','France','Greece'],correct:2,answer:2,explain:"Lascaux is in southwestern France.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()}
             ],
-            reviewResources:{summary:'Paleolithic era covered early human survival with stone tools, nomadism, mastery of fire and Lascaux cave paintings.',slidesUrl:'',videoUrl:''}
+            reviewResources:{summary:'Paleolithic era covered early human survival with stone tools, nomadism, mastery of fire and Lascaux cave paintings.',slidesUrl:'',videoUrl:'',audioUrl:''}
           }
         },
         biology:{
@@ -2416,7 +2441,7 @@ createApp({
               {q:"What tool do biologists use to see tardigrades?",opts:['Telescope','Microscope','Stethoscope','Periscope'],correct:1,answer:1,explain:"Microscopes magnify tiny organisms.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()},
               {q:"What makes tardigrades special in science?",opts:['They can fly','They survive extreme radiation, vacuum, and boiling heat','They talk','They are immortal'],correct:1,answer:1,explain:"They are among the most resilient creatures known.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()}
             ],
-            reviewResources:{summary:'Tardigrades are microscopic 8-legged animals renowned for extreme resilience via cryptobiosis.',slidesUrl:'',videoUrl:''}
+            reviewResources:{summary:'Tardigrades are microscopic 8-legged animals renowned for extreme resilience via cryptobiosis.',slidesUrl:'',videoUrl:'',audioUrl:''}
           }
         },
         math:{topic:'Beast Academy 4A — Shapes & Angles',weeklyTarget:'30–45 min daily',status:'completed',timeSpent:'195 min',starsAndTrophies:'22 stars',lessonsCompleted:'4A Ch.1 Shapes Practice\n4A Ch.1 Chapter Test',workImages:[],showSupplements:false,supplements:''},
@@ -2485,7 +2510,7 @@ createApp({
               {q:"What is domestication?",opts:['Going to sleep','Taming animals and cultivating crops for human use','Making stone axes','Traveling by boat'],correct:1,answer:null,explain:"Domestication brings wild species under human care.",streak:0,timesAnswered:0,lastReviewed:null},
               {q:"What does 'Neolithic' mean?",opts:['Old Stone Age','Bronze Age','New Stone Age','Iron Age'],correct:2,answer:null,explain:"Neo = New, Lithic = Stone.",streak:0,timesAnswered:0,lastReviewed:null}
             ],
-            reviewResources:{summary:'Neolithic revolution marked the dawn of farming, animal domestication, pottery, and permanent stone settlements like Skara Brae.',slidesUrl:'',videoUrl:''}
+            reviewResources:{summary:'Neolithic revolution marked the dawn of farming, animal domestication, pottery, and permanent stone settlements like Skara Brae.',slidesUrl:'',videoUrl:'',audioUrl:''}
           }
         },
         biology:{
@@ -2525,7 +2550,7 @@ createApp({
               {q:"Which of the following is a non-living thing?",opts:['Oak tree','Granite rock','Earthworm','Mushroom'],correct:1,answer:null,explain:"Rocks do not have cells or metabolism.",streak:0,timesAnswered:0,lastReviewed:null},
               {q:"Why do sunflowers turn toward the sun?",opts:['For fun','Phototropism — responding to light stimulus for energy','Because the wind blows them','They do not move'],correct:1,answer:null,explain:"Plants respond to light stimuli to maximize photosynthesis.",streak:0,timesAnswered:0,lastReviewed:null}
             ],
-            reviewResources:{summary:'Biology is the study of life. Living things grow, use energy, maintain homeostasis, and reproduce.',slidesUrl:'',videoUrl:''}
+            reviewResources:{summary:'Biology is the study of life. Living things grow, use energy, maintain homeostasis, and reproduce.',slidesUrl:'',videoUrl:'',audioUrl:''}
           }
         },
         math:{topic:'Beast Academy 4A — Multiplication Strategies',weeklyTarget:'30–45 min daily',status:'in-progress',timeSpent:'',starsAndTrophies:'',lessonsCompleted:'Working through multi-digit challenge problems.',workImages:[],showSupplements:false,supplements:''},
@@ -2540,7 +2565,7 @@ createApp({
       if (currentWeek.value !== idx) currentWeek.value = idx;
       const w = weeks[idx];
       if (w && !w.subjects) w.subjects = {};
-      if (w && !w.subjects.history) w.subjects.history = {topic:'',status:'pending',core:{historyQuestUnit:'',historyHop:'',uewh:'',notes:''},enrichment:[],activities:{travelLog:{done:false,notes:''},mapActivity:{done:false,description:'',notes:''},craft:{done:false,description:'',supplies:'',notes:''},notebook:{activeTab:'bigideas',bigIdeas:[],details:[],questions:[],copywork:{text:'',done:false},workImages:[]}},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:''}}};
+      if (w && !w.subjects.history) w.subjects.history = {topic:'',status:'pending',core:{historyQuestUnit:'',historyHop:'',uewh:'',notes:''},enrichment:[],activities:{travelLog:{done:false,notes:''},mapActivity:{done:false,description:'',notes:''},craft:{done:false,description:'',supplies:'',notes:''},notebook:{activeTab:'bigideas',bigIdeas:[],details:[],questions:[],copywork:{text:'',done:false},workImages:[]}},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:'',audioUrl:''}}};
       // Ensure copywork exists on existing weeks (guard for data from older schema)
       if (w?.subjects?.history?.activities?.notebook) {
         const nb = w.subjects.history.activities.notebook;
@@ -2552,7 +2577,7 @@ createApp({
         // Switch activeTab away from removed tabs
         if (nb.activeTab === 'terms' || nb.activeTab === 'narration' || nb.activeTab === 'photos') nb.activeTab = 'bigideas';
       }
-      if (w && !w.subjects.biology) w.subjects.biology = {topic:'',status:'pending',core:{rsoUnit:'',generationGenius:'',notes:''},generationGenius:'',ggVideos:[],enrichment:[],labs:[],notebook:{activeTab:'bigideas',terms:[],bigIdeas:[],smallStuff:[],workImages:[]},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:''}}};
+      if (w && !w.subjects.biology) w.subjects.biology = {topic:'',status:'pending',core:{rsoUnit:'',generationGenius:'',notes:''},generationGenius:'',ggVideos:[],enrichment:[],labs:[],notebook:{activeTab:'bigideas',terms:[],bigIdeas:[],smallStuff:[],workImages:[]},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:'',audioUrl:''}}};
       if (w?.subjects?.biology && !Array.isArray(w.subjects.biology.ggVideos)) { w.subjects.biology.ggVideos = w.subjects.biology.core?.generationGenius ? [{topic:w.subjects.biology.core.generationGenius,watched:false,date:''}] : []; }
       if (w && !w.subjects.math)    w.subjects.math    = {topic:'',weeklyTarget:'',status:'pending',timeSpent:'',starsAndTrophies:'',lessonsCompleted:'',workImages:[],showSupplements:false,supplements:''};
       if (w && !w.subjects.ela) w.subjects.ela = {topic:'',status:'pending',reading:{book:"Charlotte's Web",chapters:'',notes:''},writing:{program:'IEW / Oakschool',lesson:'',styleFocus:'',studentDraft:'',workSample:{url:'',caption:''}},grammar:{mctTopic:'',punctuationTopic:'',notes:''},spelling:{lessonRule:'',score:''},vocabulary:{words:'',notes:''}};
@@ -2565,7 +2590,7 @@ createApp({
         if (!e.grammar)    e.grammar    = {mctTopic:'',punctuationTopic:'',notes:''};
         if (!e.spelling)   e.spelling   = {lessonRule:'',score:''};
         if (!e.vocabulary) e.vocabulary = {words:'',notes:''};
-        if (!e.reviewResources) e.reviewResources = {summary:'',videoUrl:'',slidesUrl:''};
+        if (!e.reviewResources) e.reviewResources = {summary:'',videoUrl:'',slidesUrl:'',audioUrl:''};
       }
       if (w && !w.subjects.lp)      w.subjects.lp      = {topic:'',status:'pending',notes:''};
       return w || null;
@@ -3039,7 +3064,7 @@ createApp({
       const bq = () => ({
         submitted:false,score:0,
         questions:Array(5).fill(null).map(()=>({q:'',opts:['','','',''],correct:0,answer:null,explain:'',streak:0,timesAnswered:0,lastReviewed:null})),
-        reviewResources:{summary:'',slidesUrl:'',videoUrl:''}
+        reviewResources:{summary:'',slidesUrl:'',videoUrl:'',audioUrl:''}
       });
 
       weeks.push({
@@ -3120,7 +3145,7 @@ createApp({
         questions: Array(5).fill(null).map(() => ({
           q:'', opts:['','','',''], correct:0, answer:null, explain:'', streak:0, timesAnswered:0, lastReviewed:null
         })),
-        reviewResources: { summary:'', slidesUrl:'', videoUrl:'' }
+        reviewResources: { summary:'', slidesUrl:'', videoUrl:'',audioUrl:'' }
       });
 
       const makeEmptyWeek = (num, monDate) => {
@@ -3252,7 +3277,7 @@ createApp({
             if (!e.grammar)    e.grammar    = {mctTopic:'',punctuationTopic:'',notes:''};
             if (!e.spelling)   e.spelling   = {lessonRule:'',score:''};
             if (!e.vocabulary) e.vocabulary = {words:'',notes:''};
-            if (!e.reviewResources) e.reviewResources = {summary:'',videoUrl:'',slidesUrl:''};
+            if (!e.reviewResources) e.reviewResources = {summary:'',videoUrl:'',slidesUrl:'',audioUrl:''};
           }
           // Math v5→v6 migration: add Beast Academy fields
           if (w.subjects.math) {
