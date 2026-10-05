@@ -47,6 +47,7 @@
     .rr-link-pill{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.75rem;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:0.2rem 0.65rem;text-decoration:none;margin-top:0.35rem;word-break:break-all}
     .rr-link-pill:hover{background:#dbeafe}
     .rr-audio{width:100%;display:block;border-radius:0.5rem;margin-top:0.35rem;accent-color:#7c3aed}
+    .student-lock{background:#f9fafb!important;color:#9ca3af!important;cursor:not-allowed!important;resize:none!important}
     .dash-card{background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;padding:1.25rem}
 
     /* ============================================================
@@ -292,14 +293,14 @@
           <div style="font-weight:800;color:#1f2937;font-size:0.95rem;display:flex;align-items:center;gap:0.4rem">
             <span>🎵</span> Electives &amp; Extracurricular Activities
           </div>
-          <button @click="electives.push({name:'',schedule:'',notes:''})" style="font-size:0.72rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;padding:0.2rem 0.5rem;border-radius:0.4rem;cursor:pointer">+ Add Elective</button>
+          <button v-if="currentRole==='parent'" @click="electives.push({name:'',schedule:'',notes:''})" style="font-size:0.72rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;padding:0.2rem 0.5rem;border-radius:0.4rem;cursor:pointer">+ Add Elective</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0.75rem">
           <div v-for="(el,eli) in electives" :key="eli" style="background:#fffbeb;border:1px solid #fde68a;border-radius:0.6rem;padding:0.75rem;position:relative">
             <button v-if="currentRole==='parent'" @click="electives.splice(eli,1)" style="position:absolute;top:0.5rem;right:0.5rem;color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
-            <input class="prose-input" v-model="el.name" style="font-weight:700;font-size:0.875rem;color:#92400e;margin-bottom:0.25rem" placeholder="Elective (e.g. Piano, Jiu-Jitsu)">
-            <input class="prose-input" v-model="el.schedule" style="font-size:0.78rem;color:#b45309;margin-bottom:0.35rem" placeholder="Schedule (e.g. Weekly · Fridays 4 PM)">
-            <textarea v-model="el.notes" rows="2" style="width:100%;font-size:0.78rem;border:1px solid #fde68a;border-radius:0.4rem;padding:0.3rem 0.5rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Notes / goals…"></textarea>
+            <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="el.name" style="font-weight:700;font-size:0.875rem;color:#92400e;margin-bottom:0.25rem" placeholder="Elective (e.g. Piano, Jiu-Jitsu)">
+            <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="el.schedule" style="font-size:0.78rem;color:#b45309;margin-bottom:0.35rem" placeholder="Schedule (e.g. Weekly · Fridays 4 PM)">
+            <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="el.notes" rows="2" style="width:100%;font-size:0.78rem;border:1px solid #fde68a;border-radius:0.4rem;padding:0.3rem 0.5rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Notes / goals…"></textarea>
           </div>
         </div>
       </div>
@@ -326,13 +327,13 @@
               <tbody>
                 <tr v-for="(m,mi) in lpMeetings" :key="mi" style="border-bottom:1px solid #f9fafb">
                   <td style="padding:0.45rem 0.6rem;font-weight:700;color:#4c1d95">
-                    <input class="prose-input" v-model="m.title" style="font-size:0.82rem;font-weight:700">
+                    <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="m.title" style="font-size:0.82rem;font-weight:700">
                   </td>
                   <td style="padding:0.45rem 0.6rem;color:#374151">
-                    <input class="prose-input" v-model="m.dateTime" style="font-size:0.8rem">
+                    <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="m.dateTime" style="font-size:0.8rem">
                   </td>
                   <td style="padding:0.45rem 0.6rem">
-                    <button @click="m.confirmed = !m.confirmed"
+                    <button @click="currentRole!=='student'&&(m.confirmed=!m.confirmed)"
                       :style="m.confirmed ? 'background:#d1fae5;color:#065f46;border-color:#a7f3d0' : 'background:#f3f4f6;color:#6b7280;border-color:#e5e7eb'"
                       style="font-size:0.72rem;padding:0.15rem 0.55rem;border-radius:999px;border:1px solid;cursor:pointer;font-weight:600">
                       {{ m.confirmed ? '✅ Confirmed' : '⬜ Pending' }}
@@ -353,11 +354,11 @@
           </div>
           <div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.82rem">
             <div v-for="(yd,yi) in yearAtGlance" :key="yi" style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.6rem;background:#f9fafb;border-radius:0.5rem;border:1px solid #f3f4f6">
-              <input class="prose-input" v-model="yd.event" style="font-weight:600;color:#374151;flex:1" placeholder="Event name…">
-              <input class="prose-input" v-model="yd.dates" style="color:#059669;font-weight:700;text-align:right;max-width:170px" placeholder="Dates…">
+              <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="yd.event" style="font-weight:600;color:#374151;flex:1" placeholder="Event name…">
+              <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="yd.dates" style="color:#059669;font-weight:700;text-align:right;max-width:170px" placeholder="Dates…">
               <button v-if="currentRole==='parent'" @click="yearAtGlance.splice(yi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem;margin-left:0.3rem">✕</button>
             </div>
-            <button @click="yearAtGlance.push({event:'',dates:''})" style="font-size:0.75rem;color:#059669;background:none;border:none;cursor:pointer;align-self:flex-start;margin-top:0.2rem">+ Add Date / Break</button>
+            <button v-if="currentRole==='parent'" @click="yearAtGlance.push({event:'',dates:''})" style="font-size:0.75rem;color:#059669;background:none;border:none;cursor:pointer;align-self:flex-start;margin-top:0.2rem">+ Add Date / Break</button>
           </div>
         </div>
       </div>
@@ -369,10 +370,10 @@
         </div>
         <div v-for="(g,gi) in annualGoals" :key="gi" style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem">
           <input type="checkbox" :disabled="currentRole==='guest'" v-model="g.done">
-          <input class="prose-input" v-model="g.text" :style="g.done?'text-decoration:line-through;color:#9ca3af':'color:#374151'" style="font-size:0.875rem" placeholder="Goal…">
+          <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="g.text" :style="g.done?'text-decoration:line-through;color:#9ca3af':'color:#374151'" style="font-size:0.875rem" placeholder="Goal…">
           <button v-if="currentRole==='parent'" @click="annualGoals.splice(gi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.8rem;flex-shrink:0">✕</button>
         </div>
-        <button @click="annualGoals.push({text:'',done:false})" style="font-size:0.8rem;color:#7c3aed;background:none;border:none;cursor:pointer;margin-top:0.25rem">+ Add Goal</button>
+        <button v-if="currentRole==='parent'" @click="annualGoals.push({text:'',done:false})" style="font-size:0.8rem;color:#7c3aed;background:none;border:none;cursor:pointer;margin-top:0.25rem">+ Add Goal</button>
       </div>
 
       <!-- Recent Quiz Scores -->
@@ -410,18 +411,18 @@
           <div>
             <div style="font-size:1.25rem;font-weight:800;color:#1f2937">Week {{cw.weekNum}}</div>
             <div style="margin-top:0.3rem">
-              <span v-if="!cw.editingDates" @click="cw.editingDates=true" style="font-size:0.82rem;color:#6b7280;cursor:pointer">📅 {{cw.startDate}} – {{cw.endDate}} <span style="font-size:0.75rem;color:#7c3aed">✏️ edit dates</span></span>
+              <span v-if="!cw.editingDates" @click="currentRole==='parent'&&(cw.editingDates=true)" style="font-size:0.82rem;color:#6b7280;cursor:pointer">📅 {{cw.startDate}} – {{cw.endDate}} <span v-if="currentRole==='parent'" style="font-size:0.75rem;color:#7c3aed">✏️ edit dates</span></span>
               <span v-else style="display:flex;align-items:center;gap:0.4rem">
-                <input type="date" v-model="cw.startDate" style="font-size:0.8rem;border:1px solid #d1d5db;border-radius:0.4rem;padding:0.2rem 0.5rem">
+                <input type="date" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.startDate" style="font-size:0.8rem;border:1px solid #d1d5db;border-radius:0.4rem;padding:0.2rem 0.5rem">
                 <span style="color:#9ca3af">–</span>
-                <input type="date" v-model="cw.endDate" style="font-size:0.8rem;border:1px solid #d1d5db;border-radius:0.4rem;padding:0.2rem 0.5rem">
+                <input type="date" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.endDate" style="font-size:0.8rem;border:1px solid #d1d5db;border-radius:0.4rem;padding:0.2rem 0.5rem">
                 <button @click="cw.editingDates=false" style="font-size:0.75rem;color:#7c3aed;background:none;border:none;cursor:pointer;font-weight:700">✓ Done</button>
               </span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
             <span style="font-size:0.8rem;color:#6b7280;font-weight:600">Status:</span>
-            <select v-model="cw.status" :disabled="currentRole==='guest'" style="font-size:0.82rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.4rem 0.75rem;background:#f9fafb;font-weight:600">
+            <select v-model="cw.status" :disabled="currentRole!=='parent'" style="font-size:0.82rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.4rem 0.75rem;background:#f9fafb;font-weight:600">
               <option value="pending">📋 Pending</option>
               <option value="in-progress">🔄 In Progress</option>
               <option value="completed">✅ Completed</option>
@@ -448,7 +449,7 @@
             <span style="font-size:1.5rem">🏛</span>
             <div style="flex:1">
               <div style="font-size:0.72rem;font-weight:700;color:#6d28d9;text-transform:uppercase">History Chapter Topic</div>
-              <input v-model="cw.subjects.history.topic" class="prose-input" style="font-size:1.05rem;font-weight:700;color:#1f2937" placeholder="e.g. Paleolithic Times…">
+              <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.topic" class="prose-input" style="font-size:1.05rem;font-weight:700;color:#1f2937" placeholder="e.g. Paleolithic Times…">
             </div>
           </div>
 
@@ -462,19 +463,19 @@
               <div style="margin-top:0.875rem;display:flex;flex-direction:column;gap:0.75rem">
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">History Quest Unit</div>
-                  <input v-model="cw.subjects.history.core.historyQuestUnit" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Unit / chapter reading…">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.core.historyQuestUnit" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Unit / chapter reading…">
                 </div>
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6d28d9;text-transform:uppercase;margin-bottom:0.3rem">History Hop!</div>
-                  <input v-model="cw.subjects.history.core.historyHop" style="width:100%;font-size:0.85rem;border:1px solid #ddd6fe;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box;background:#faf5ff" placeholder="History Hop! chapter or character…">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.core.historyHop" style="width:100%;font-size:0.85rem;border:1px solid #ddd6fe;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box;background:#faf5ff" placeholder="History Hop! chapter or character…">
                 </div>
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">UEWH Reading (Encyclopedia of World History)</div>
-                  <input v-model="cw.subjects.history.core.uewh" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Pages to read…">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.core.uewh" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Pages to read…">
                 </div>
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Core Reading Notes</div>
-                  <textarea v-model="cw.subjects.history.core.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Notes, page highlights…"></textarea>
+                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.core.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Notes, page highlights…"></textarea>
                 </div>
               </div>
             </div>
@@ -494,10 +495,10 @@
                     <span :style="'font-size:0.68rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:999px;'+(r.type==='book'?'background:#fef3c7;color:#92400e':r.type==='video'?'background:#fee2e2;color:#991b1b':'background:#dbeafe;color:#1e40af')">
                       {{r.type==='book'?'📕 Book':r.type==='video'?'🎬 Video':'🌐 Website'}}
                     </span>
-                    <input class="prose-input" v-model="r.title" style="font-size:0.85rem;font-weight:600;color:#1f2937;flex:1;min-width:180px" placeholder="Title (and author if book)…">
+                    <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="r.title" style="font-size:0.85rem;font-weight:600;color:#1f2937;flex:1;min-width:180px" placeholder="Title (and author if book)…">
                     <div style="display:flex;align-items:center;gap:0.3rem;max-width:320px;flex:1">
                       <a v-if="r.url" :href="r.url" target="_blank" style="font-size:0.8rem;color:#2563eb;text-decoration:none" title="Open link">🔗</a>
-                      <input class="prose-input" v-model="r.url" style="font-size:0.75rem;color:#6b7280;background:#fff;border:1px solid #e5e7eb;border-radius:0.35rem;padding:0.2rem 0.45rem" placeholder="URL / link (optional)…">
+                      <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="r.url" style="font-size:0.75rem;color:#6b7280;background:#fff;border:1px solid #e5e7eb;border-radius:0.35rem;padding:0.2rem 0.45rem" placeholder="URL / link (optional)…">
                     </div>
                   </div>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.history.enrichment.splice(cw.subjects.history.enrichment.indexOf(r),1)" style="color:#ef4444;background:none;border:none;cursor:pointer;flex-shrink:0;font-size:0.8rem">✕</button>
@@ -533,26 +534,26 @@
                 </div>
                 <div v-if="!isOpen('hrevsum'+currentWeek) && !cw.subjects.history.quiz.reviewResources.summary" style="font-size:0.78rem;color:#d97706;font-style:italic">No summary yet — paste NotebookLM text here.</div>
                 <div v-if="isOpen('hrevsum'+currentWeek)">
-                  <textarea v-model="cw.subjects.history.quiz.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled chapter summary here…"></textarea>
+                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled chapter summary here…"></textarea>
                 </div>
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🖼 Slide Deck / Presentation</div>
-                <input v-model="cw.subjects.history.quiz.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
                 <div v-if="cw.subjects.history.quiz.reviewResources.slidesUrl" style="margin-top:0.35rem">
                   <a :href="cw.subjects.history.quiz.reviewResources.slidesUrl" target="_blank" class="rr-link-pill">🔗 Open Presentation</a>
                 </div>
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🎥 Review Video / Audio</div>
-                <input v-model="cw.subjects.history.quiz.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
                 <div v-if="ytEmbed(cw.subjects.history.quiz.reviewResources.videoUrl)" class="rr-video-wrap">
                   <iframe :src="ytEmbed(cw.subjects.history.quiz.reviewResources.videoUrl)" allowfullscreen></iframe>
                 </div>
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
-                <input v-if="currentRole==='parent'" v-model="cw.subjects.history.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
+                <input v-if="currentRole==='parent'" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
                 <div v-if="cw.subjects.history.quiz.reviewResources.audioUrl" style="margin-top:0.5rem">
                   <audio controls :src="cw.subjects.history.quiz.reviewResources.audioUrl" class="rr-audio"></audio>
                 </div>
@@ -574,7 +575,7 @@
                   <input type="checkbox" :disabled="currentRole==='guest'" v-model="cw.subjects.history.activities.travelLog.done">
                   <span style="font-weight:700;font-size:0.875rem;color:#701a75">🗺 History Travel Log</span>
                 </div>
-                <textarea v-model="cw.subjects.history.activities.travelLog.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;background:#fff;box-sizing:border-box" placeholder="Travel log prompt / notes…"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.activities.travelLog.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;background:#fff;box-sizing:border-box" placeholder="Travel log prompt / notes…"></textarea>
               </div>
               <!-- Map Activity -->
               <div style="margin-top:0.75rem;padding:0.875rem;background:#eff6ff;border-radius:0.75rem;border:1px solid #bfdbfe">
@@ -582,8 +583,8 @@
                   <input type="checkbox" :disabled="currentRole==='guest'" v-model="cw.subjects.history.activities.mapActivity.done">
                   <span style="font-weight:700;font-size:0.875rem;color:#1e40af">🗺 Map Activity</span>
                 </div>
-                <input v-model="cw.subjects.history.activities.mapActivity.description" style="width:100%;font-size:0.82rem;border:1px solid #bfdbfe;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;margin-bottom:0.4rem;box-sizing:border-box;background:#fff" placeholder="Description…">
-                <textarea v-model="cw.subjects.history.activities.mapActivity.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #bfdbfe;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;background:#fff;box-sizing:border-box" placeholder="Map notes…"></textarea>
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.activities.mapActivity.description" style="width:100%;font-size:0.82rem;border:1px solid #bfdbfe;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;margin-bottom:0.4rem;box-sizing:border-box;background:#fff" placeholder="Description…">
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.activities.mapActivity.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #bfdbfe;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;background:#fff;box-sizing:border-box" placeholder="Map notes…"></textarea>
               </div>
               <!-- Craft with Supplies -->
               <div style="margin-top:0.75rem;padding:0.875rem;background:#fff7ed;border-radius:0.75rem;border:1px solid #fed7aa">
@@ -591,12 +592,12 @@
                   <input type="checkbox" :disabled="currentRole==='guest'" v-model="cw.subjects.history.activities.craft.done">
                   <span style="font-weight:700;font-size:0.875rem;color:#9a3412">🎨 Craft / Project</span>
                 </div>
-                <input v-model="cw.subjects.history.activities.craft.description" style="width:100%;font-size:0.82rem;border:1px solid #fdba74;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;margin-bottom:0.5rem;box-sizing:border-box;background:#fff" placeholder="Craft / project description…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.activities.craft.description" style="width:100%;font-size:0.82rem;border:1px solid #fdba74;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;margin-bottom:0.5rem;box-sizing:border-box;background:#fff" placeholder="Craft / project description…">
                 <div style="margin-bottom:0.5rem">
                   <div style="font-size:0.7rem;font-weight:700;color:#c2410c;text-transform:uppercase;margin-bottom:0.25rem">📦 Supplies List (Materials Needed)</div>
-                  <input v-model="cw.subjects.history.activities.craft.supplies" style="width:100%;font-size:0.82rem;border:1px solid #fdba74;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;box-sizing:border-box;background:#fff" placeholder="e.g. Air-dry clay, popsicle sticks, paints, brown paper…">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.activities.craft.supplies" style="width:100%;font-size:0.82rem;border:1px solid #fdba74;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;box-sizing:border-box;background:#fff" placeholder="e.g. Air-dry clay, popsicle sticks, paints, brown paper…">
                 </div>
-                <textarea v-model="cw.subjects.history.activities.craft.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #fdba74;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;background:#fff;box-sizing:border-box" placeholder="Project notes…"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.activities.craft.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #fdba74;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;background:#fff;box-sizing:border-box" placeholder="Project notes…"></textarea>
               </div>
             </div>
           </div>
@@ -624,7 +625,7 @@
               <!-- Big Ideas -->
               <div v-if="cw.subjects.history.activities.notebook.activeTab==='bigideas'">
                 <div v-for="(b,bi) in cw.subjects.history.activities.notebook.bigIdeas" :key="bi" style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.55rem 0.75rem;background:#faf5ff;border-radius:0.5rem;border:1px solid #e9d5ff;margin-bottom:0.45rem">
-                  <textarea class="prose-input nb-textarea" v-model.lazy="b.text" rows="2" style="font-size:0.85rem;color:#374151;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Big Idea text…"></textarea>
+                  <textarea class="prose-input nb-textarea" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model.lazy="b.text" rows="2" style="font-size:0.85rem;color:#374151;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Big Idea text…"></textarea>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.history.activities.notebook.bigIdeas.splice(bi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
                 </div>
                 <button @click="cw.subjects.history.activities.notebook.bigIdeas.push({text:'',done:false})" style="font-size:0.75rem;color:#7c3aed;background:none;border:none;cursor:pointer;margin-top:0.25rem">+ Add Big Idea</button>
@@ -633,7 +634,7 @@
               <!-- Details -->
               <div v-if="cw.subjects.history.activities.notebook.activeTab==='details'">
                 <div v-for="(d,di) in cw.subjects.history.activities.notebook.details" :key="di" style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.55rem 0.75rem;background:#eff6ff;border-radius:0.5rem;border:1px solid #bfdbfe;margin-bottom:0.45rem">
-                  <textarea class="prose-input nb-textarea" v-model.lazy="d.text" rows="2" style="font-size:0.85rem;color:#1e3a8a;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Key detail / fact…"></textarea>
+                  <textarea class="prose-input nb-textarea" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model.lazy="d.text" rows="2" style="font-size:0.85rem;color:#1e3a8a;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Key detail / fact…"></textarea>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.history.activities.notebook.details.splice(di,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
                 </div>
                 <button @click="cw.subjects.history.activities.notebook.details.push({text:'',done:false})" style="font-size:0.75rem;color:#7c3aed;background:none;border:none;cursor:pointer;margin-top:0.25rem">+ Add Detail</button>
@@ -644,12 +645,12 @@
                 <div v-for="(q,qi) in cw.subjects.history.activities.notebook.questions" :key="qi" style="margin-bottom:0.75rem;background:#fff;border:1px solid #e5e7eb;border-radius:0.6rem;padding:0.75rem">
                   <div style="display:flex;align-items:flex-start;gap:0.5rem">
                     <div style="flex:1">
-                      <textarea class="prose-input nb-textarea" v-model.lazy="q.text" rows="2" style="font-size:0.875rem;font-weight:700;color:#1f2937;margin-bottom:0.35rem;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Discussion question…"></textarea>
+                      <textarea class="prose-input nb-textarea" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model.lazy="q.text" rows="2" style="font-size:0.875rem;font-weight:700;color:#1f2937;margin-bottom:0.35rem;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Discussion question…"></textarea>
                       <button @click="q.showAns = !q.showAns" style="font-size:0.72rem;color:#7c3aed;background:none;border:none;cursor:pointer;padding:0;font-weight:600">
                         {{ q.showAns ? '▲ Hide Key Points' : '▼ Show Key Points / Answer' }}
                       </button>
                       <div v-if="q.showAns" style="margin-top:0.45rem">
-                        <textarea v-model="q.answer" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #d1d5db;border-radius:0.4rem;padding:0.4rem 0.6rem;outline:none;box-sizing:border-box;background:#faf5ff;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;resize:vertical" placeholder="Key points / expected answer…"></textarea>
+                        <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="q.answer" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #d1d5db;border-radius:0.4rem;padding:0.4rem 0.6rem;outline:none;box-sizing:border-box;background:#faf5ff;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;resize:vertical" placeholder="Key points / expected answer…"></textarea>
                       </div>
                     </div>
                     <button v-if="currentRole==='parent'" @click="cw.subjects.history.activities.notebook.questions.splice(qi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
@@ -686,9 +687,9 @@
                         <input type="file" accept="image/*" style="display:none" @change="uploadLocalFile($event, img)">
                       </label>
                       <span style="font-size:0.75rem;color:#9ca3af">or paste URL:</span>
-                      <input v-model="img.url" style="flex:1;min-width:180px;font-size:0.78rem;border:1px solid #e9d5ff;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="https://…">
+                      <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="img.url" style="flex:1;min-width:180px;font-size:0.78rem;border:1px solid #e9d5ff;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="https://…">
                     </div>
-                    <input v-model="img.caption" style="width:100%;font-size:0.78rem;border:1px solid #e9d5ff;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="Caption (e.g. Week 1 copywork — Paleolithic Era)">
+                    <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="img.caption" style="width:100%;font-size:0.78rem;border:1px solid #e9d5ff;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="Caption (e.g. Week 1 copywork — Paleolithic Era)">
                     <img v-if="img.url" :src="img.url" class="img-preview" alt="Preview">
                   </div>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.history.activities.notebook.workImages.splice(ii,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.8rem">✕</button>
@@ -769,7 +770,7 @@
             <span style="font-size:1.5rem">🔬</span>
             <div style="flex:1">
               <div style="font-size:0.72rem;font-weight:700;color:#1d4ed8;text-transform:uppercase">Biology Topic</div>
-              <input v-model="cw.subjects.biology.topic" class="prose-input" style="font-size:1.05rem;font-weight:700;color:#1f2937" placeholder="e.g. Tardigrades…">
+              <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.topic" class="prose-input" style="font-size:1.05rem;font-weight:700;color:#1f2937" placeholder="e.g. Tardigrades…">
             </div>
           </div>
 
@@ -783,12 +784,12 @@
               <div style="margin-top:0.875rem;display:flex;flex-direction:column;gap:0.75rem">
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">RSO Biology Unit / Chapter</div>
-                  <input v-model="cw.subjects.biology.core.rsoUnit" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Lesson details…">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.core.rsoUnit" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Lesson details…">
                 </div>
 
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Lesson Notes</div>
-                  <textarea v-model="cw.subjects.biology.core.notes" rows="2" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Notes…"></textarea>
+                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.core.notes" rows="2" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Notes…"></textarea>
                 </div>
               </div>
             </div>
@@ -808,10 +809,10 @@
                     <span :style="'font-size:0.68rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:999px;'+(r.type==='book'?'background:#fef3c7;color:#92400e':r.type==='video'?'background:#fee2e2;color:#991b1b':'background:#dbeafe;color:#1e40af')">
                       {{r.type==='book'?'📕 Book':r.type==='video'?'🎬 Video':'🌐 Website'}}
                     </span>
-                    <input class="prose-input" v-model="r.title" style="font-size:0.85rem;font-weight:600;color:#1f2937;flex:1;min-width:180px" placeholder="Title (and author if book)…">
+                    <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="r.title" style="font-size:0.85rem;font-weight:600;color:#1f2937;flex:1;min-width:180px" placeholder="Title (and author if book)…">
                     <div style="display:flex;align-items:center;gap:0.3rem;max-width:320px;flex:1">
                       <a v-if="r.url" :href="r.url" target="_blank" style="font-size:0.8rem;color:#2563eb;text-decoration:none">🔗</a>
-                      <input class="prose-input" v-model="r.url" style="font-size:0.75rem;color:#6b7280;background:#fff;border:1px solid #e5e7eb;border-radius:0.35rem;padding:0.2rem 0.45rem" placeholder="URL (optional)…">
+                      <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="r.url" style="font-size:0.75rem;color:#6b7280;background:#fff;border:1px solid #e5e7eb;border-radius:0.35rem;padding:0.2rem 0.45rem" placeholder="URL (optional)…">
                     </div>
                   </div>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.biology.enrichment.splice(cw.subjects.biology.enrichment.indexOf(r),1)" style="color:#ef4444;background:none;border:none;cursor:pointer;flex-shrink:0;font-size:0.8rem">✕</button>
@@ -838,7 +839,7 @@
               <p style="font-size:0.75rem;color:#6b7280;margin:0.75rem 0 0.75rem">Optional support videos — not tracked in Core Curriculum progress.</p>
               <div v-for="(gg,ggi) in (cw.subjects.biology.ggVideos||[])" :key="ggi" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;background:#eff6ff;border-radius:0.5rem;border:1px solid #bfdbfe;margin-bottom:0.4rem">
                 <input type="checkbox" :disabled="currentRole==='guest'" v-model="gg.watched" style="flex-shrink:0;accent-color:#2563eb">
-                <input class="prose-input" v-model="gg.topic" style="flex:1;font-size:0.85rem;color:#1e3a8a" placeholder="Episode title or topic…">
+                <input class="prose-input" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="gg.topic" style="flex:1;font-size:0.85rem;color:#1e3a8a" placeholder="Episode title or topic…">
                 <input v-model="gg.date" type="date" style="font-size:0.75rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.2rem 0.4rem;color:#4b5563;background:#fff" :disabled="currentRole==='guest'">
                 <button v-if="currentRole==='parent'" @click="cw.subjects.biology.ggVideos.splice(ggi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
               </div>
@@ -859,11 +860,11 @@
               <div style="margin-top:0.875rem;display:flex;flex-direction:column;gap:0.65rem">
                 <div>
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Lab Title</div>
-                  <input v-model="lab.title" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;box-sizing:border-box">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="lab.title" style="width:100%;font-size:0.85rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.75rem;outline:none;box-sizing:border-box">
                 </div>
                 <div v-for="fld in [{k:'objective',l:'Objective',r:2},{k:'materials',l:'Materials Needed',r:2},{k:'procedure',l:'Procedure',r:4},{k:'observations',l:'Observations',r:3},{k:'conclusion',l:'Conclusion',r:2}]" :key="fld.k">
                   <div style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">{{fld.l}}</div>
-                  <textarea v-model="lab[fld.k]" :rows="fld.r" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.45rem 0.75rem;outline:none;box-sizing:border-box" :placeholder="fld.l+'…'"></textarea>
+                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="lab[fld.k]" :rows="fld.r" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.45rem 0.75rem;outline:none;box-sizing:border-box" :placeholder="fld.l+'…'"></textarea>
                 </div>
                 <div style="margin-top:0.6rem;padding:0.75rem;background:#eff6ff;border-radius:0.6rem;border:1px solid #bfdbfe">
                   <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">📸 Lab Photo / Experiment Evidence</div>
@@ -873,7 +874,7 @@
                       <input type="file" accept="image/*" style="display:none" @change="uploadLocalFile($event, lab)">
                     </label>
                     <span style="font-size:0.75rem;color:#9ca3af">or paste URL:</span>
-                    <input v-model="lab.url" style="flex:1;min-width:180px;font-size:0.78rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none;background:#fff" placeholder="https://…">
+                    <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="lab.url" style="flex:1;min-width:180px;font-size:0.78rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none;background:#fff" placeholder="https://…">
                   </div>
                   <img v-if="lab.url" :src="lab.url" class="img-preview" style="max-height:100px;margin-top:0.45rem" alt="Lab experiment photo">
                 </div>
@@ -904,7 +905,7 @@
               <!-- Big Ideas -->
               <div v-if="cw.subjects.biology.notebook.activeTab==='bigideas'">
                 <div v-for="(b,bi) in cw.subjects.biology.notebook.bigIdeas" :key="bi" style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.55rem 0.75rem;background:#eff6ff;border-radius:0.5rem;border:1px solid #bfdbfe;margin-bottom:0.45rem">
-                  <textarea class="prose-input nb-textarea" v-model.lazy="b.text" rows="2" style="font-size:0.85rem;color:#1e3a8a;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Big Idea…"></textarea>
+                  <textarea class="prose-input nb-textarea" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model.lazy="b.text" rows="2" style="font-size:0.85rem;color:#1e3a8a;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Big Idea…"></textarea>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.biology.notebook.bigIdeas.splice(bi,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
                 </div>
                 <button @click="cw.subjects.biology.notebook.bigIdeas.push({text:'',done:false})" style="font-size:0.75rem;color:#2563eb;background:none;border:none;cursor:pointer;margin-top:0.25rem">+ Add Big Idea</button>
@@ -913,7 +914,7 @@
               <!-- Small Stuff -->
               <div v-if="cw.subjects.biology.notebook.activeTab==='smallstuff'">
                 <div v-for="(s,si) in cw.subjects.biology.notebook.smallStuff" :key="si" style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.55rem 0.75rem;background:#f0fdfa;border-radius:0.5rem;border:1px solid #99f6e4;margin-bottom:0.45rem">
-                  <textarea class="prose-input nb-textarea" v-model.lazy="s.text" rows="2" style="font-size:0.85rem;color:#134e4a;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Fact / small detail…"></textarea>
+                  <textarea class="prose-input nb-textarea" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model.lazy="s.text" rows="2" style="font-size:0.85rem;color:#134e4a;line-height:1.5;resize:vertical;min-height:2.6rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word" placeholder="Fact / small detail…"></textarea>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.biology.notebook.smallStuff.splice(si,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.75rem">✕</button>
                 </div>
                 <button @click="cw.subjects.biology.notebook.smallStuff.push({text:'',done:false})" style="font-size:0.75rem;color:#0f766e;background:none;border:none;cursor:pointer;margin-top:0.25rem">+ Add Small Stuff</button>
@@ -930,9 +931,9 @@
                         <input type="file" accept="image/*" style="display:none" @change="uploadLocalFile($event, img)">
                       </label>
                       <span style="font-size:0.75rem;color:#9ca3af">or URL:</span>
-                      <input v-model="img.url" style="flex:1;min-width:180px;font-size:0.78rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="https://…">
+                      <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="img.url" style="flex:1;min-width:180px;font-size:0.78rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="https://…">
                     </div>
-                    <input v-model="img.caption" style="width:100%;font-size:0.78rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="Caption (e.g. Tardigrade under 100x microscope)">
+                    <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="img.caption" style="width:100%;font-size:0.78rem;border:1px solid #bfdbfe;border-radius:0.35rem;padding:0.25rem 0.5rem;outline:none" placeholder="Caption (e.g. Tardigrade under 100x microscope)">
                     <img v-if="img.url" :src="img.url" class="img-preview" alt="Preview">
                   </div>
                   <button v-if="currentRole==='parent'" @click="cw.subjects.biology.notebook.workImages.splice(ii,1)" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.8rem">✕</button>
@@ -1027,19 +1028,19 @@
                 </div>
                 <div v-if="!isOpen('brevsum'+currentWeek) && !cw.subjects.biology.quiz.reviewResources.summary" style="font-size:0.78rem;color:#2563eb;font-style:italic">No summary yet — paste NotebookLM text here.</div>
                 <div v-if="isOpen('brevsum'+currentWeek)">
-                  <textarea v-model="cw.subjects.biology.quiz.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled chapter summary here…"></textarea>
+                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled chapter summary here…"></textarea>
                 </div>
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🖼 Slide Deck / Presentation</div>
-                <input v-model="cw.subjects.biology.quiz.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
                 <div v-if="cw.subjects.biology.quiz.reviewResources.slidesUrl" style="margin-top:0.35rem">
                   <a :href="cw.subjects.biology.quiz.reviewResources.slidesUrl" target="_blank" class="rr-link-pill">📑 Study Slides</a>
                 </div>
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🎥 Review Video / Audio</div>
-                <input v-model="cw.subjects.biology.quiz.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
                 <div v-if="ytEmbed(cw.subjects.biology.quiz.reviewResources.videoUrl)" class="rr-video-wrap">
                   <iframe :src="ytEmbed(cw.subjects.biology.quiz.reviewResources.videoUrl)" allowfullscreen></iframe>
                 </div>
@@ -1049,7 +1050,7 @@
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
-                <input v-if="currentRole==='parent'" v-model="cw.subjects.biology.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
+                <input v-if="currentRole==='parent'" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
                 <div v-if="cw.subjects.biology.quiz.reviewResources.audioUrl" style="margin-top:0.5rem">
                   <audio controls :src="cw.subjects.biology.quiz.reviewResources.audioUrl" class="rr-audio"></audio>
                 </div>
@@ -1072,11 +1073,11 @@
               <div style="font-size:0.72rem;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:0.05em">📌 Target &amp; Planning</div>
               <div>
                 <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Curriculum / Focus Topic</div>
-                <input v-model="cw.subjects.math.topic" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. BA 3.10: Fractions — Comparing &amp; Ordering">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.math.topic" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. BA 3.10: Fractions — Comparing &amp; Ordering">
               </div>
               <div>
                 <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Weekly Target</div>
-                <input v-model="cw.subjects.math.weeklyTarget" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. 30–45 min daily · Complete Chapter Test">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.math.weeklyTarget" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. 30–45 min daily · Complete Chapter Test">
               </div>
             </div>
 
@@ -1086,20 +1087,20 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem">
                 <div>
                   <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">⏱ Total Time Spent</div>
-                  <input v-model="cw.subjects.math.timeSpent" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.45rem 0.65rem;outline:none;box-sizing:border-box" placeholder="e.g. 379 min · 5h 15m">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.math.timeSpent" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.45rem 0.65rem;outline:none;box-sizing:border-box" placeholder="e.g. 379 min · 5h 15m">
                 </div>
                 <div>
                   <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">⭐ Stars &amp; Trophies</div>
-                  <input v-model="cw.subjects.math.starsAndTrophies" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.45rem 0.65rem;outline:none;box-sizing:border-box" placeholder="e.g. 28 stars, 1 trophy">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.math.starsAndTrophies" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.45rem 0.65rem;outline:none;box-sizing:border-box" placeholder="e.g. 28 stars, 1 trophy">
                 </div>
               </div>
               <div>
                 <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">📚 Lessons / Topics Completed</div>
-                <textarea v-model="cw.subjects.math.lessonsCompleted" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. 3.10 Comparing and Ordering&#10;3.10.T Chapter Test&#10;4A Ch.1 Shapes Practice"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.math.lessonsCompleted" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. 3.10 Comparing and Ordering&#10;3.10.T Chapter Test&#10;4A Ch.1 Shapes Practice"></textarea>
               </div>
               <div>
                 <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Status</div>
-                <select v-model="cw.subjects.math.status" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.6rem;background:#f9fafb">
+                <select :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.math.status" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.6rem;background:#f9fafb">
                   <option value="pending">📋 Pending</option>
                   <option value="in-progress">🔄 In Progress</option>
                   <option value="completed">✅ Completed</option>
@@ -1117,7 +1118,7 @@
                   <button v-if="currentRole==='parent'" @click="cw.subjects.math.workImages.splice(ii,1)" style="font-size:0.7rem;color:#ef4444;background:none;border:none;cursor:pointer;padding:0.2rem 0.4rem;border-radius:0.25rem;hover:background:#fee2e2">✕ Remove</button>
                 </div>
                 <!-- URL input -->
-                <input v-model="img.url" style="width:100%;font-size:0.8rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.4rem 0.6rem;outline:none;box-sizing:border-box" placeholder="Paste image URL…" type="url">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="img.url" style="width:100%;font-size:0.8rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.4rem 0.6rem;outline:none;box-sizing:border-box" placeholder="Paste image URL…" type="url">
                 <div style="font-size:0.7rem;color:#9ca3af;text-align:center">— or —</div>
                 <!-- Local file upload -->
                 <label style="display:flex;align-items:center;justify-content:center;gap:0.4rem;font-size:0.78rem;color:#7c3aed;cursor:pointer;border:1.5px dashed #c4b5fd;border-radius:0.4rem;padding:0.5rem;background:#faf5ff">
@@ -1126,9 +1127,9 @@
                 </label>
                 <!-- Preview -->
                 <img v-if="img.url" :src="img.url" style="max-width:100%;max-height:220px;border-radius:0.4rem;object-fit:contain;border:1px solid #ede9fe">
-                <input v-model="img.caption" style="width:100%;font-size:0.78rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.35rem 0.6rem;outline:none;box-sizing:border-box" placeholder="Caption (e.g. Week 3 BA Report · Sep 8)">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="img.caption" style="width:100%;font-size:0.78rem;border:1px solid #e5e7eb;border-radius:0.4rem;padding:0.35rem 0.6rem;outline:none;box-sizing:border-box" placeholder="Caption (e.g. Week 3 BA Report · Sep 8)">
               </div>
-              <button @click="cw.subjects.math.workImages.push({url:'',caption:''})" style="font-size:0.8rem;color:#7c3aed;border:1.5px dashed #c4b5fd;border-radius:0.5rem;padding:0.5rem 0.75rem;background:#faf5ff;cursor:pointer;width:100%">+ Add Work Sample / Screenshot</button>
+              <button v-if="currentRole==='parent'" @click="cw.subjects.math.workImages.push({url:'',caption:''})" style="font-size:0.8rem;color:#7c3aed;border:1.5px dashed #c4b5fd;border-radius:0.5rem;padding:0.5rem 0.75rem;background:#faf5ff;cursor:pointer;width:100%">+ Add Work Sample / Screenshot</button>
             </div>
 
             <!-- OPTIONAL SUPPLEMENTS (collapsible) -->
@@ -1138,7 +1139,7 @@
                 <span style="font-size:0.9rem;transition:transform 0.2s" :style="cw.subjects.math.showSupplements?'transform:rotate(180deg)':''">▾</span>
               </button>
               <div v-show="cw.subjects.math.showSupplements" style="padding:0.75rem 0.875rem;border-top:1px solid #e5e7eb">
-                <textarea v-model="cw.subjects.math.supplements" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. IXL: 4th grade · Fractions (Grade A)&#10;i-Ready: 15 min lesson&#10;Prodigy: 20 min battle session"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.math.supplements" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. IXL: 4th grade · Fractions (Grade A)&#10;i-Ready: 15 min lesson&#10;Prodigy: 20 min battle session"></textarea>
               </div>
             </div>
 
@@ -1159,11 +1160,11 @@
             <div style="display:grid;grid-template-columns:1fr auto;gap:0.75rem;align-items:end;margin-bottom:1.25rem">
               <div>
                 <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Weekly Focus Summary</div>
-                <input v-model="cw.subjects.ela.topic" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. Charlotte's Web Ch. 1–4 · IEW Lesson 1 · Grammar Island Nouns">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.topic" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. Charlotte's Web Ch. 1–4 · IEW Lesson 1 · Grammar Island Nouns">
               </div>
               <div>
                 <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Status</div>
-                <select v-model="cw.subjects.ela.status" style="font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.6rem;background:#f9fafb">
+                <select :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.status" style="font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.6rem;background:#f9fafb">
                   <option value="pending">📋 Pending</option>
                   <option value="in-progress">🔄 In Progress</option>
                   <option value="completed">✅ Completed</option>
@@ -1179,16 +1180,16 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem">
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Novel / Book Title</div>
-                  <input v-model="cw.subjects.ela.reading.book" style="width:100%;font-size:0.82rem;border:1px solid #d1fae5;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Charlotte's Web">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.reading.book" style="width:100%;font-size:0.82rem;border:1px solid #d1fae5;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Charlotte's Web">
                 </div>
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Chapters / Pages Covered</div>
-                  <input v-model="cw.subjects.ela.reading.chapters" style="width:100%;font-size:0.82rem;border:1px solid #d1fae5;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Ch. 1–4, pp. 1–32">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.reading.chapters" style="width:100%;font-size:0.82rem;border:1px solid #d1fae5;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Ch. 1–4, pp. 1–32">
                 </div>
               </div>
               <div>
                 <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Reading Notes / Reflection</div>
-                <textarea v-model="cw.subjects.ela.reading.notes" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #d1fae5;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6" placeholder="What happened? What did Isadora think or feel? Favorite moment…"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.reading.notes" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #d1fae5;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6" placeholder="What happened? What did Isadora think or feel? Favorite moment…"></textarea>
               </div>
             </div>
 
@@ -1200,20 +1201,20 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem">
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Program</div>
-                  <input v-model="cw.subjects.ela.writing.program" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="IEW – Fables, Myths &amp; Fairy Tales">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.writing.program" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="IEW – Fables, Myths &amp; Fairy Tales">
                 </div>
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Unit &amp; Lesson</div>
-                  <input v-model="cw.subjects.ela.writing.lesson" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Lesson 1: Boy Who Cried Wolf – KWO">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.writing.lesson" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Lesson 1: Boy Who Cried Wolf – KWO">
                 </div>
               </div>
               <div style="margin-bottom:0.6rem">
                 <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Style Focus / Checklist</div>
-                <input v-model="cw.subjects.ela.writing.styleFocus" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="-ly adverb, who/which clause, strong verbs…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.writing.styleFocus" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="-ly adverb, who/which clause, strong verbs…">
               </div>
               <div style="margin-bottom:0.6rem">
                 <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Student Draft / Writing Sample</div>
-                <textarea v-model="cw.subjects.ela.writing.studentDraft" rows="4" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.65;font-family:Georgia,serif" placeholder="Paste or type Isadora's writing sample here…"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.writing.studentDraft" rows="4" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.65;font-family:Georgia,serif" placeholder="Paste or type Isadora's writing sample here…"></textarea>
               </div>
               <!-- Writing sample image upload -->
               <div style="background:#fffbeb;border:1px dashed #fde68a;border-radius:0.5rem;padding:0.75rem">
@@ -1223,8 +1224,8 @@
                     📷 Upload
                     <input type="file" accept="image/*" @change="uploadLocalFile($event, cw.subjects.ela.writing.workSample)" style="display:none">
                   </label>
-                  <input v-model="cw.subjects.ela.writing.workSample.url" style="flex:1;min-width:160px;font-size:0.75rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.3rem 0.6rem;outline:none" placeholder="…or paste image URL">
-                  <input v-model="cw.subjects.ela.writing.workSample.caption" style="flex:1;min-width:120px;font-size:0.75rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.3rem 0.6rem;outline:none" placeholder="Caption (optional)">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.writing.workSample.url" style="flex:1;min-width:160px;font-size:0.75rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.3rem 0.6rem;outline:none" placeholder="…or paste image URL">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.writing.workSample.caption" style="flex:1;min-width:120px;font-size:0.75rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.3rem 0.6rem;outline:none" placeholder="Caption (optional)">
                 </div>
                 <div v-if="cw.subjects.ela.writing.workSample.url" style="margin-top:0.5rem">
                   <img :src="cw.subjects.ela.writing.workSample.url" class="img-preview" alt="Writing sample">
@@ -1241,16 +1242,16 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">MCT Grammar Island — Concept</div>
-                  <input v-model="cw.subjects.ela.grammar.mctTopic" style="width:100%;font-size:0.82rem;border:1px solid #bae6fd;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Four-level analysis / Nouns &amp; Pronouns">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.grammar.mctTopic" style="width:100%;font-size:0.82rem;border:1px solid #bae6fd;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Four-level analysis / Nouns &amp; Pronouns">
                 </div>
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">One True Sentence — Punctuation Focus</div>
-                  <input v-model="cw.subjects.ela.grammar.punctuationTopic" style="width:100%;font-size:0.82rem;border:1px solid #bae6fd;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="End marks &amp; comma rules">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.grammar.punctuationTopic" style="width:100%;font-size:0.82rem;border:1px solid #bae6fd;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="End marks &amp; comma rules">
                 </div>
               </div>
               <div style="margin-top:0.6rem">
                 <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Grammar Notes</div>
-                <textarea v-model="cw.subjects.ela.grammar.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #bae6fd;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6" placeholder="Practice exercises, key sentences, or errors to revisit…"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.grammar.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #bae6fd;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6" placeholder="Practice exercises, key sentences, or errors to revisit…"></textarea>
               </div>
             </div>
 
@@ -1262,17 +1263,17 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem">
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Phonetic Zoo — Lesson &amp; Rule</div>
-                  <input v-model="cw.subjects.ela.spelling.lessonRule" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Lesson 1: Rule of C &amp; K">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.spelling.lessonRule" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="Lesson 1: Rule of C &amp; K">
                 </div>
                 <div>
                   <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Test Score</div>
-                  <input v-model="cw.subjects.ela.spelling.score" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="100% — mastered!">
+                  <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.spelling.score" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff" placeholder="100% — mastered!">
                 </div>
               </div>
               <div>
                 <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Operation Lexicon (Ted Hughes) — Words &amp; Notes</div>
-                <textarea v-model="cw.subjects.ela.vocabulary.words" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6;margin-bottom:0.4rem" placeholder="furtive, amiable, luminous…"></textarea>
-                <textarea v-model="cw.subjects.ela.vocabulary.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6" placeholder="Usage sentences, context, or study method notes…"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.vocabulary.words" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6;margin-bottom:0.4rem" placeholder="furtive, amiable, luminous…"></textarea>
+                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.vocabulary.notes" rows="2" style="width:100%;font-size:0.82rem;border:1px solid #e9d5ff;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.6" placeholder="Usage sentences, context, or study method notes…"></textarea>
               </div>
             </div>
 
@@ -1300,19 +1301,19 @@
                 </div>
                 <div v-if="!isOpen('erevsum'+currentWeek) && !cw.subjects.ela.reviewResources.summary" style="font-size:0.78rem;color:#059669;font-style:italic">No summary yet — paste NotebookLM text here.</div>
                 <div v-if="isOpen('erevsum'+currentWeek)">
-                  <textarea v-model="cw.subjects.ela.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled ELA summary here…"></textarea>
+                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled ELA summary here…"></textarea>
                 </div>
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:0.35rem">🖼 Slide Deck / Presentation</div>
-                <input v-model="cw.subjects.ela.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
                 <div v-if="cw.subjects.ela.reviewResources.slidesUrl" style="margin-top:0.35rem">
                   <a :href="cw.subjects.ela.reviewResources.slidesUrl" target="_blank" class="rr-link-pill">📑 Study Slides</a>
                 </div>
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:0.35rem">🎥 Review Video / Audio</div>
-                <input v-model="cw.subjects.ela.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
+                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
                 <div v-if="ytEmbed(cw.subjects.ela.reviewResources.videoUrl)" class="rr-video-wrap">
                   <iframe :src="ytEmbed(cw.subjects.ela.reviewResources.videoUrl)" allowfullscreen></iframe>
                 </div>
@@ -1322,7 +1323,7 @@
               </div>
               <div style="margin-top:1rem">
                 <div style="font-size:0.7rem;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
-                <input v-if="currentRole==='parent'" v-model="cw.subjects.ela.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
+                <input v-if="currentRole==='parent'" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
                 <div v-if="cw.subjects.ela.reviewResources.audioUrl" style="margin-top:0.5rem">
                   <audio controls :src="cw.subjects.ela.reviewResources.audioUrl" class="rr-audio"></audio>
                 </div>
@@ -1340,11 +1341,11 @@
             </div>
             <div style="margin-bottom:0.75rem">
               <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Agenda / Topic</div>
-              <input v-model="cw.subjects.lp.topic" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. LP1 Review &amp; Work Samples…">
+              <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.lp.topic" style="width:100%;font-size:0.88rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="e.g. LP1 Review &amp; Work Samples…">
             </div>
             <div style="margin-bottom:0.75rem">
               <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Status</div>
-              <select v-model="cw.subjects.lp.status" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.6rem;background:#f9fafb">
+              <select :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.lp.status" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.4rem 0.6rem;background:#f9fafb">
                 <option value="pending">📋 Pending</option>
                 <option value="in-progress">🔄 In Progress</option>
                 <option value="completed">✅ Completed</option>
@@ -1352,7 +1353,7 @@
             </div>
             <div>
               <div style="font-size:0.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.3rem">Teacher Feedback &amp; Follow-up</div>
-              <textarea v-model="cw.subjects.lp.notes" rows="4" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Work samples presented, charter teacher feedback, goals for next LP…"></textarea>
+              <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.lp.notes" rows="4" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box" placeholder="Work samples presented, charter teacher feedback, goals for next LP…"></textarea>
             </div>
           </div>
         </div>
@@ -1368,7 +1369,7 @@
           <div style="font-size:1.25rem;font-weight:800;color:#1f2937">📚 Isadora's Book Log</div>
           <div style="font-size:0.75rem;color:#6b7280">{{books.length}} book{{books.length===1?'':'s'}} — click any title to see details &amp; notes</div>
         </div>
-        <button v-if="currentRole==='parent'" @click="openAddBookModal()" style="display:flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;background:#7c3aed;color:#fff;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;box-shadow:0 2px 6px #7c3aed44">+ Add Book / Log Reading</button>
+        <button v-if="currentRole!=='guest'" @click="openAddBookModal()" style="display:flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;background:#7c3aed;color:#fff;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;box-shadow:0 2px 6px #7c3aed44">+ Add Book / Log Reading</button>
       </div>
 
       <!-- Subject filter pills -->
@@ -1452,7 +1453,7 @@
                 <span v-for="s in 5" :key="s" @click="setRating(bk,s)" style="font-size:1.3rem;cursor:pointer;transition:transform 0.1s" :style="s<=bk.rating?'color:#f59e0b':'color:#d1d5db'" :class="currentRole==='guest'?'':'hover:scale-110'">★</span>
               </div>
             </div>
-            <div style="margin-bottom:0.75rem">
+            <div v-if="currentRole!=='student'" style="margin-bottom:0.75rem">
               <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:0.3rem">Pedagogical Notes</div>
               <textarea v-model="bk.review" :disabled="currentRole==='guest'" rows="3" style="width:100%;font-size:0.82rem;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.5rem 0.6rem;outline:none;box-sizing:border-box;background:#fff;resize:vertical" placeholder="Age-appropriateness, vocabulary level, Isadora's reaction, notes for LP meeting…"></textarea>
             </div>
@@ -1521,7 +1522,7 @@
                 <input v-model="newBookDraft.dateAdded" type="date" style="width:100%;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.45rem 0.65rem">
               </div>
             </div>
-            <div>
+            <div v-if="currentRole!=='student'">
               <label style="font-size:0.72rem;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:0.3rem">Pedagogical Notes</label>
               <textarea v-model="newBookDraft.review" rows="3" style="width:100%;font-size:0.85rem;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.5rem 0.75rem;outline:none;box-sizing:border-box;resize:vertical" placeholder="Age-appropriateness, vocabulary, Isadora's reaction, notes for LP…"></textarea>
             </div>
