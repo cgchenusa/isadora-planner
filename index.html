@@ -512,53 +512,70 @@
             </div>
           </div>
 
-          <!-- History Review Resources -->
+          <!-- History Study Memos -->
           <div style="background:#fff;border-radius:0.875rem;border:1px solid #fde68a;box-shadow:0 1px 4px #0001;margin-bottom:0.75rem;overflow:hidden">
             <div class="section-hdr" @click="toggle('hrev'+currentWeek)" :style="isOpen('hrev'+currentWeek)?'background:linear-gradient(to right,#fffbeb,#fff)':''">
               <span style="font-weight:700;color:#92400e;font-size:0.92rem;display:flex;align-items:center;gap:0.6rem">
-                📋 Review Resources
-                <span style="font-size:0.68rem;font-weight:600;color:#b45309;background:#fef3c7;padding:0.1rem 0.5rem;border-radius:999px">Summary · Slides · Video</span>
+                📋 Study Memos
+                <span style="font-size:0.68rem;font-weight:600;color:#b45309;background:#fef3c7;padding:0.1rem 0.5rem;border-radius:999px">Memo Book · Memo Slide · MemoCast</span>
               </span>
               <span style="color:#d97706;font-size:0.75rem">{{isOpen('hrev'+currentWeek)?'▲':'▼'}}</span>
             </div>
             <div v-if="isOpen('hrev'+currentWeek)" style="padding:0 1.25rem 1.5rem;border-top:1px solid #fef3c7">
-              <div style="margin-top:1rem">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
-                  <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase">📖 Chapter Summary</div>
-                  <button @click="toggle('hrevsum'+currentWeek)" style="font-size:0.72rem;padding:0.2rem 0.65rem;background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:999px;cursor:pointer;font-weight:600">
-                    {{isOpen('hrevsum'+currentWeek)?'▲ Close Summary':'📖 Read Full Summary'}}
-                  </button>
+              <!-- PARENT MODE: URL paste inputs -->
+              <template v-if="currentRole==='parent'">
+                <div style="margin-top:1rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">📚 Memo Book (PDF URL)</div>
+                  <input v-model="cw.subjects.history.quiz.reviewResources.memoBookUrl" class="rr-url-input" placeholder="Paste Google Drive PDF link…">
+                  <div v-if="cw.subjects.history.quiz.reviewResources.memoBookUrl" style="margin-top:0.35rem">
+                    <a :href="cw.subjects.history.quiz.reviewResources.memoBookUrl" target="_blank" class="rr-link-pill">📚 Open Memo Book</a>
+                  </div>
                 </div>
-                <div v-if="!isOpen('hrevsum'+currentWeek) && cw.subjects.history.quiz.reviewResources.summary" style="font-size:0.78rem;color:#6b7280;background:#fffbeb;border-radius:0.4rem;padding:0.4rem 0.65rem;border:1px solid #fef3c7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                  {{cw.subjects.history.quiz.reviewResources.summary.substring(0,120)}}…
+                <div style="margin-top:1rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🖥️ Memo Slide (Presentation URL)</div>
+                  <input v-model="cw.subjects.history.quiz.reviewResources.memoSlideUrl" class="rr-url-input" placeholder="Paste Google Slides or Canva link…">
+                  <div v-if="cw.subjects.history.quiz.reviewResources.memoSlideUrl" style="margin-top:0.35rem">
+                    <a :href="cw.subjects.history.quiz.reviewResources.memoSlideUrl" target="_blank" class="rr-link-pill">🖥️ View Memo Slide</a>
+                  </div>
                 </div>
-                <div v-if="!isOpen('hrevsum'+currentWeek) && !cw.subjects.history.quiz.reviewResources.summary" style="font-size:0.78rem;color:#d97706;font-style:italic">No summary yet — paste NotebookLM text here.</div>
-                <div v-if="isOpen('hrevsum'+currentWeek)">
-                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled chapter summary here…"></textarea>
+                <div style="margin-top:1rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🎙️ MemoCast (Audio URL — Home Sweet Homework)</div>
+                  <input v-model="cw.subjects.history.quiz.reviewResources.memoCastUrl" class="rr-url-input" placeholder="Paste audio link or Google Drive MP3 URL…">
+                  <div v-if="cw.subjects.history.quiz.reviewResources.memoCastUrl" style="margin-top:0.5rem">
+                    <audio controls :src="cw.subjects.history.quiz.reviewResources.memoCastUrl" class="rr-audio"></audio>
+                  </div>
                 </div>
-              </div>
-              <div style="margin-top:1rem">
-                <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🖼 Slide Deck / Presentation</div>
-                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
-                <div v-if="cw.subjects.history.quiz.reviewResources.slidesUrl" style="margin-top:0.35rem">
-                  <a :href="cw.subjects.history.quiz.reviewResources.slidesUrl" target="_blank" class="rr-link-pill">🔗 Open Presentation</a>
+              </template>
+              <!-- STUDENT MODE: colorful interactive buttons -->
+              <template v-else>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:1rem">
+                  <a v-if="cw.subjects.history.quiz.reviewResources.memoBookUrl" :href="cw.subjects.history.quiz.reviewResources.memoBookUrl" target="_blank" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem 1.25rem;background:linear-gradient(135deg,#fef3c7,#fffbeb);border:2px solid #fde68a;border-radius:0.75rem;text-decoration:none;font-weight:700;color:#92400e;font-size:0.9rem">
+                    <span style="font-size:1.4rem">📚</span><span>Open Memo Book</span>
+                  </a>
+                  <div v-else style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:#f9fafb;border:2px dashed #e5e7eb;border-radius:0.75rem;color:#9ca3af;font-size:0.82rem">
+                    <span style="font-size:1.2rem">📚</span><span>Memo Book not linked yet</span>
+                  </div>
+                  <a v-if="cw.subjects.history.quiz.reviewResources.memoSlideUrl" :href="cw.subjects.history.quiz.reviewResources.memoSlideUrl" target="_blank" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem 1.25rem;background:linear-gradient(135deg,#ede9fe,#f5f3ff);border:2px solid #c4b5fd;border-radius:0.75rem;text-decoration:none;font-weight:700;color:#5b21b6;font-size:0.9rem">
+                    <span style="font-size:1.4rem">🖥️</span><span>View Memo Slide</span>
+                  </a>
+                  <div v-else style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:#f9fafb;border:2px dashed #e5e7eb;border-radius:0.75rem;color:#9ca3af;font-size:0.82rem">
+                    <span style="font-size:1.2rem">🖥️</span><span>Memo Slide not linked yet</span>
+                  </div>
+                  <div v-if="cw.subjects.history.quiz.reviewResources.memoCastUrl" style="background:linear-gradient(135deg,#fdf4ff,#fae8ff);border:2px solid #f0abfc;border-radius:0.75rem;padding:0.875rem 1.25rem">
+                    <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.65rem">
+                      <span style="font-size:1.4rem">🎙️</span>
+                      <div>
+                        <div style="font-weight:700;color:#701a75;font-size:0.9rem">Listen to MemoCast</div>
+                        <div style="font-size:0.72rem;color:#a21caf;font-weight:600">🎙️ Home Sweet Homework</div>
+                      </div>
+                    </div>
+                    <audio controls :src="cw.subjects.history.quiz.reviewResources.memoCastUrl" class="rr-audio"></audio>
+                  </div>
+                  <div v-else style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:#f9fafb;border:2px dashed #e5e7eb;border-radius:0.75rem;color:#9ca3af;font-size:0.82rem">
+                    <span style="font-size:1.2rem">🎙️</span><span>MemoCast not linked yet</span>
+                  </div>
                 </div>
-              </div>
-              <div style="margin-top:1rem">
-                <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🎥 Review Video / Audio</div>
-                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
-                <div v-if="ytEmbed(cw.subjects.history.quiz.reviewResources.videoUrl)" class="rr-video-wrap">
-                  <iframe :src="ytEmbed(cw.subjects.history.quiz.reviewResources.videoUrl)" allowfullscreen></iframe>
-                </div>
-              </div>
-              <div style="margin-top:1rem">
-                <div style="font-size:0.7rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
-                <input v-if="currentRole==='parent'" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.history.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
-                <div v-if="cw.subjects.history.quiz.reviewResources.audioUrl" style="margin-top:0.5rem">
-                  <audio controls :src="cw.subjects.history.quiz.reviewResources.audioUrl" class="rr-audio"></audio>
-                </div>
-                <div v-else-if="currentRole!=='parent'" style="font-size:0.78rem;color:#d97706;font-style:italic">No audio linked yet.</div>
-              </div>
+              </template>
             </div>
           </div>
 
@@ -1018,56 +1035,70 @@
             </div>
           </div>
 
-          <!-- Biology Review Resources -->
-          <div v-if="cw.subjects.biology.quiz.reviewResources" style="background:#fff;border-radius:0.875rem;border:1px solid #bfdbfe;box-shadow:0 1px 4px #0001;margin-bottom:0.75rem;overflow:hidden">
+          <!-- Biology Study Memos -->
+          <div style="background:#fff;border-radius:0.875rem;border:1px solid #bfdbfe;box-shadow:0 1px 4px #0001;margin-bottom:0.75rem;overflow:hidden">
             <div class="section-hdr" @click="toggle('brev'+currentWeek)" :style="isOpen('brev'+currentWeek)?'background:linear-gradient(to right,#eff6ff,#fff)':''">
               <span style="font-weight:700;color:#1e40af;font-size:0.92rem;display:flex;align-items:center;gap:0.6rem">
-                📋 Review Resources
-                <span style="font-size:0.68rem;font-weight:600;color:#1d4ed8;background:#dbeafe;padding:0.1rem 0.5rem;border-radius:999px">Summary · Slides · Video</span>
+                📋 Study Memos
+                <span style="font-size:0.68rem;font-weight:600;color:#1d4ed8;background:#dbeafe;padding:0.1rem 0.5rem;border-radius:999px">Memo Book · Memo Slide · MemoCast</span>
               </span>
               <span style="color:#2563eb;font-size:0.75rem">{{isOpen('brev'+currentWeek)?'▲':'▼'}}</span>
             </div>
             <div v-if="isOpen('brev'+currentWeek)" style="padding:0 1.25rem 1.5rem;border-top:1px solid #dbeafe">
-              <div style="margin-top:1rem">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
-                  <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase">📖 Chapter Summary</div>
-                  <button v-if="currentRole==='parent'" @click="toggle('brevsum'+currentWeek)" style="font-size:0.72rem;padding:0.2rem 0.65rem;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:999px;cursor:pointer;font-weight:600">
-                    {{isOpen('brevsum'+currentWeek)?'▲ Close Summary':'📖 Read Full Summary'}}
-                  </button>
+              <!-- PARENT MODE: URL paste inputs -->
+              <template v-if="currentRole==='parent'">
+                <div style="margin-top:1rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">📚 Memo Book (PDF URL)</div>
+                  <input v-model="cw.subjects.biology.quiz.reviewResources.memoBookUrl" class="rr-url-input" placeholder="Paste Google Drive PDF link…">
+                  <div v-if="cw.subjects.biology.quiz.reviewResources.memoBookUrl" style="margin-top:0.35rem">
+                    <a :href="cw.subjects.biology.quiz.reviewResources.memoBookUrl" target="_blank" class="rr-link-pill">📚 Open Memo Book</a>
+                  </div>
                 </div>
-                <div v-if="!isOpen('brevsum'+currentWeek) && cw.subjects.biology.quiz.reviewResources.summary" style="font-size:0.78rem;color:#6b7280;background:#eff6ff;border-radius:0.4rem;padding:0.4rem 0.65rem;border:1px solid #dbeafe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                  {{cw.subjects.biology.quiz.reviewResources.summary.substring(0,120)}}…
+                <div style="margin-top:1rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🖥️ Memo Slide (Presentation URL)</div>
+                  <input v-model="cw.subjects.biology.quiz.reviewResources.memoSlideUrl" class="rr-url-input" placeholder="Paste Google Slides or Canva link…">
+                  <div v-if="cw.subjects.biology.quiz.reviewResources.memoSlideUrl" style="margin-top:0.35rem">
+                    <a :href="cw.subjects.biology.quiz.reviewResources.memoSlideUrl" target="_blank" class="rr-link-pill">🖥️ View Memo Slide</a>
+                  </div>
                 </div>
-                <div v-if="!isOpen('brevsum'+currentWeek) && !cw.subjects.biology.quiz.reviewResources.summary" style="font-size:0.78rem;color:#2563eb;font-style:italic">No summary yet — paste NotebookLM text here.</div>
-                <div v-if="isOpen('brevsum'+currentWeek)">
-                  <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.summary" class="rr-summary-ta" rows="8" placeholder="Paste compiled chapter summary here…"></textarea>
+                <div style="margin-top:1rem">
+                  <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🎙️ MemoCast (Audio URL — Home Sweet Homework)</div>
+                  <input v-model="cw.subjects.biology.quiz.reviewResources.memoCastUrl" class="rr-url-input" placeholder="Paste audio link or Google Drive MP3 URL…">
+                  <div v-if="cw.subjects.biology.quiz.reviewResources.memoCastUrl" style="margin-top:0.5rem">
+                    <audio controls :src="cw.subjects.biology.quiz.reviewResources.memoCastUrl" class="rr-audio"></audio>
+                  </div>
                 </div>
-              </div>
-              <div style="margin-top:1rem">
-                <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🖼 Slide Deck / Presentation</div>
-                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.slidesUrl" class="rr-url-input" placeholder="Paste Google Slides, Canva or PDF link…">
-                <div v-if="cw.subjects.biology.quiz.reviewResources.slidesUrl" style="margin-top:0.35rem">
-                  <a :href="cw.subjects.biology.quiz.reviewResources.slidesUrl" target="_blank" class="rr-link-pill">📑 Study Slides</a>
+              </template>
+              <!-- STUDENT MODE: colorful interactive buttons -->
+              <template v-else>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:1rem">
+                  <a v-if="cw.subjects.biology.quiz.reviewResources.memoBookUrl" :href="cw.subjects.biology.quiz.reviewResources.memoBookUrl" target="_blank" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem 1.25rem;background:linear-gradient(135deg,#fef3c7,#fffbeb);border:2px solid #fde68a;border-radius:0.75rem;text-decoration:none;font-weight:700;color:#92400e;font-size:0.9rem">
+                    <span style="font-size:1.4rem">📚</span><span>Open Memo Book</span>
+                  </a>
+                  <div v-else style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:#f9fafb;border:2px dashed #e5e7eb;border-radius:0.75rem;color:#9ca3af;font-size:0.82rem">
+                    <span style="font-size:1.2rem">📚</span><span>Memo Book not linked yet</span>
+                  </div>
+                  <a v-if="cw.subjects.biology.quiz.reviewResources.memoSlideUrl" :href="cw.subjects.biology.quiz.reviewResources.memoSlideUrl" target="_blank" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem 1.25rem;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #bfdbfe;border-radius:0.75rem;text-decoration:none;font-weight:700;color:#1e40af;font-size:0.9rem">
+                    <span style="font-size:1.4rem">🖥️</span><span>View Memo Slide</span>
+                  </a>
+                  <div v-else style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:#f9fafb;border:2px dashed #e5e7eb;border-radius:0.75rem;color:#9ca3af;font-size:0.82rem">
+                    <span style="font-size:1.2rem">🖥️</span><span>Memo Slide not linked yet</span>
+                  </div>
+                  <div v-if="cw.subjects.biology.quiz.reviewResources.memoCastUrl" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:2px solid #93c5fd;border-radius:0.75rem;padding:0.875rem 1.25rem">
+                    <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.65rem">
+                      <span style="font-size:1.4rem">🎙️</span>
+                      <div>
+                        <div style="font-weight:700;color:#1e40af;font-size:0.9rem">Listen to MemoCast</div>
+                        <div style="font-size:0.72rem;color:#1d4ed8;font-weight:600">🎙️ Home Sweet Homework</div>
+                      </div>
+                    </div>
+                    <audio controls :src="cw.subjects.biology.quiz.reviewResources.memoCastUrl" class="rr-audio"></audio>
+                  </div>
+                  <div v-else style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:#f9fafb;border:2px dashed #e5e7eb;border-radius:0.75rem;color:#9ca3af;font-size:0.82rem">
+                    <span style="font-size:1.2rem">🎙️</span><span>MemoCast not linked yet</span>
+                  </div>
                 </div>
-              </div>
-              <div style="margin-top:1rem">
-                <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🎥 Review Video / Audio</div>
-                <input :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.videoUrl" class="rr-url-input" placeholder="Paste YouTube link or Audio Overview URL…">
-                <div v-if="ytEmbed(cw.subjects.biology.quiz.reviewResources.videoUrl)" class="rr-video-wrap">
-                  <iframe :src="ytEmbed(cw.subjects.biology.quiz.reviewResources.videoUrl)" allowfullscreen></iframe>
-                </div>
-                <div v-else-if="cw.subjects.biology.quiz.reviewResources.videoUrl">
-                  <a :href="cw.subjects.biology.quiz.reviewResources.videoUrl" target="_blank" class="rr-link-pill">🎥 Review Video</a>
-                </div>
-              </div>
-              <div style="margin-top:1rem">
-                <div style="font-size:0.7rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.35rem">🎙️ Podcast / Audio Summary</div>
-                <input v-if="currentRole==='parent'" :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.biology.quiz.reviewResources.audioUrl" class="rr-url-input" placeholder="Paste Audio Overview or podcast MP3 URL…">
-                <div v-if="cw.subjects.biology.quiz.reviewResources.audioUrl" style="margin-top:0.5rem">
-                  <audio controls :src="cw.subjects.biology.quiz.reviewResources.audioUrl" class="rr-audio"></audio>
-                </div>
-                <div v-else-if="currentRole!=='parent'" style="font-size:0.78rem;color:#2563eb;font-style:italic">No audio linked yet.</div>
-              </div>
+              </template>
             </div>
           </div>
         </div>
@@ -1719,6 +1750,122 @@
       </div>
     </div>
 
+    <!-- MEMO COLLECTION -->
+    <div v-if="activeTab==='memos'">
+      <div style="max-width:860px;margin:0 auto;padding:1rem">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+          <span style="font-size:1.75rem">🎙️</span>
+          <div>
+            <div style="font-size:1.3rem;font-weight:800;color:#1f2937">Memo Collection</div>
+            <div style="font-size:0.8rem;color:#6b7280">All study materials — Memo Books, Slides &amp; MemoCasts across every week</div>
+          </div>
+        </div>
+
+        <!-- Filter pills -->
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
+          <button v-for="f in [{id:'all',label:'📑 All Memos'},{id:'book',label:'📚 Memo Books'},{id:'slide',label:'🖥️ Memo Slides'},{id:'cast',label:'🎙️ MemoCast'}]"
+            :key="f.id" @click="memoFilter=f.id"
+            :style="memoFilter===f.id ? 'background:#7c3aed;color:#fff;border:1.5px solid #7c3aed;font-weight:700' : 'background:#fff;color:#374151;border:1.5px solid #e5e7eb'"
+            style="padding:0.45rem 1rem;border-radius:999px;font-size:0.82rem;cursor:pointer;transition:all 0.15s">
+            {{f.label}}
+          </button>
+        </div>
+
+        <!-- Cards: loop all weeks -->
+        <template v-for="w in weeks" :key="w.id">
+          <!-- History Memo Book -->
+          <div v-if="(memoFilter==='all'||memoFilter==='book') && w.subjects?.history?.quiz?.reviewResources?.memoBookUrl"
+            style="background:#fff;border:1px solid #fde68a;border-radius:0.875rem;padding:1rem 1.25rem;margin-bottom:0.65rem;display:flex;align-items:center;gap:1rem;box-shadow:0 1px 4px #0001">
+            <span style="font-size:2rem;flex-shrink:0">📚</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.68rem;font-weight:700;color:#b45309;text-transform:uppercase;margin-bottom:0.1rem">Week {{w.weekNum}} · History</div>
+              <div style="font-weight:700;color:#1f2937;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{w.subjects.history.topic||'History Memo Book'}}</div>
+              <div style="font-size:0.7rem;color:#6b7280;margin-top:0.1rem">📚 Memo Book</div>
+            </div>
+            <a :href="w.subjects.history.quiz.reviewResources.memoBookUrl" target="_blank"
+              style="flex-shrink:0;padding:0.45rem 0.9rem;background:#fef3c7;color:#92400e;border:1.5px solid #fde68a;border-radius:0.5rem;font-size:0.8rem;font-weight:700;text-decoration:none">Open →</a>
+          </div>
+          <!-- History Memo Slide -->
+          <div v-if="(memoFilter==='all'||memoFilter==='slide') && w.subjects?.history?.quiz?.reviewResources?.memoSlideUrl"
+            style="background:#fff;border:1px solid #c4b5fd;border-radius:0.875rem;padding:1rem 1.25rem;margin-bottom:0.65rem;display:flex;align-items:center;gap:1rem;box-shadow:0 1px 4px #0001">
+            <span style="font-size:2rem;flex-shrink:0">🖥️</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.68rem;font-weight:700;color:#6d28d9;text-transform:uppercase;margin-bottom:0.1rem">Week {{w.weekNum}} · History</div>
+              <div style="font-weight:700;color:#1f2937;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{w.subjects.history.topic||'History Memo Slide'}}</div>
+              <div style="font-size:0.7rem;color:#6b7280;margin-top:0.1rem">🖥️ Memo Slide</div>
+            </div>
+            <a :href="w.subjects.history.quiz.reviewResources.memoSlideUrl" target="_blank"
+              style="flex-shrink:0;padding:0.45rem 0.9rem;background:#ede9fe;color:#5b21b6;border:1.5px solid #c4b5fd;border-radius:0.5rem;font-size:0.8rem;font-weight:700;text-decoration:none">View →</a>
+          </div>
+          <!-- History MemoCast -->
+          <div v-if="(memoFilter==='all'||memoFilter==='cast') && w.subjects?.history?.quiz?.reviewResources?.memoCastUrl"
+            style="background:linear-gradient(135deg,#fdf4ff,#fae8ff);border:1px solid #f0abfc;border-radius:0.875rem;padding:1rem 1.25rem;margin-bottom:0.65rem;box-shadow:0 1px 4px #0001">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem">
+              <span style="font-size:2rem">🎙️</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:0.68rem;font-weight:700;color:#a21caf;text-transform:uppercase;margin-bottom:0.1rem">Week {{w.weekNum}} · History · 🎙️ Home Sweet Homework</div>
+                <div style="font-weight:700;color:#701a75;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{w.subjects.history.topic||'History MemoCast'}}</div>
+              </div>
+              <a :href="w.subjects.history.quiz.reviewResources.memoCastUrl" target="_blank"
+                style="flex-shrink:0;padding:0.4rem 0.8rem;background:#f0abfc;color:#701a75;border:none;border-radius:0.5rem;font-size:0.75rem;font-weight:700;text-decoration:none">↗ Open</a>
+            </div>
+            <audio controls :src="w.subjects.history.quiz.reviewResources.memoCastUrl" class="rr-audio"></audio>
+          </div>
+          <!-- Biology Memo Book -->
+          <div v-if="(memoFilter==='all'||memoFilter==='book') && w.subjects?.biology?.quiz?.reviewResources?.memoBookUrl"
+            style="background:#fff;border:1px solid #6ee7b7;border-radius:0.875rem;padding:1rem 1.25rem;margin-bottom:0.65rem;display:flex;align-items:center;gap:1rem;box-shadow:0 1px 4px #0001">
+            <span style="font-size:2rem;flex-shrink:0">📚</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.68rem;font-weight:700;color:#065f46;text-transform:uppercase;margin-bottom:0.1rem">Week {{w.weekNum}} · Biology</div>
+              <div style="font-weight:700;color:#1f2937;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{w.subjects.biology.topic||'Biology Memo Book'}}</div>
+              <div style="font-size:0.7rem;color:#6b7280;margin-top:0.1rem">📚 Memo Book</div>
+            </div>
+            <a :href="w.subjects.biology.quiz.reviewResources.memoBookUrl" target="_blank"
+              style="flex-shrink:0;padding:0.45rem 0.9rem;background:#ecfdf5;color:#065f46;border:1.5px solid #6ee7b7;border-radius:0.5rem;font-size:0.8rem;font-weight:700;text-decoration:none">Open →</a>
+          </div>
+          <!-- Biology Memo Slide -->
+          <div v-if="(memoFilter==='all'||memoFilter==='slide') && w.subjects?.biology?.quiz?.reviewResources?.memoSlideUrl"
+            style="background:#fff;border:1px solid #bfdbfe;border-radius:0.875rem;padding:1rem 1.25rem;margin-bottom:0.65rem;display:flex;align-items:center;gap:1rem;box-shadow:0 1px 4px #0001">
+            <span style="font-size:2rem;flex-shrink:0">🖥️</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.68rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:0.1rem">Week {{w.weekNum}} · Biology</div>
+              <div style="font-weight:700;color:#1f2937;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{w.subjects.biology.topic||'Biology Memo Slide'}}</div>
+              <div style="font-size:0.7rem;color:#6b7280;margin-top:0.1rem">🖥️ Memo Slide</div>
+            </div>
+            <a :href="w.subjects.biology.quiz.reviewResources.memoSlideUrl" target="_blank"
+              style="flex-shrink:0;padding:0.45rem 0.9rem;background:#eff6ff;color:#1e40af;border:1.5px solid #bfdbfe;border-radius:0.5rem;font-size:0.8rem;font-weight:700;text-decoration:none">View →</a>
+          </div>
+          <!-- Biology MemoCast -->
+          <div v-if="(memoFilter==='all'||memoFilter==='cast') && w.subjects?.biology?.quiz?.reviewResources?.memoCastUrl"
+            style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #93c5fd;border-radius:0.875rem;padding:1rem 1.25rem;margin-bottom:0.65rem;box-shadow:0 1px 4px #0001">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem">
+              <span style="font-size:2rem">🎙️</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:0.68rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;margin-bottom:0.1rem">Week {{w.weekNum}} · Biology · 🎙️ Home Sweet Homework</div>
+                <div style="font-weight:700;color:#1e40af;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{w.subjects.biology.topic||'Biology MemoCast'}}</div>
+              </div>
+              <a :href="w.subjects.biology.quiz.reviewResources.memoCastUrl" target="_blank"
+                style="flex-shrink:0;padding:0.4rem 0.8rem;background:#93c5fd;color:#1e40af;border:none;border-radius:0.5rem;font-size:0.75rem;font-weight:700;text-decoration:none">↗ Open</a>
+            </div>
+            <audio controls :src="w.subjects.biology.quiz.reviewResources.memoCastUrl" class="rr-audio"></audio>
+          </div>
+        </template>
+
+        <!-- Empty state -->
+        <div v-if="!weeks.some(w => {
+          const hr = w.subjects?.history?.quiz?.reviewResources;
+          const br = w.subjects?.biology?.quiz?.reviewResources;
+          return (memoFilter==='all'||memoFilter==='book') && (hr?.memoBookUrl||br?.memoBookUrl) ||
+                 (memoFilter==='all'||memoFilter==='slide') && (hr?.memoSlideUrl||br?.memoSlideUrl) ||
+                 (memoFilter==='all'||memoFilter==='cast') && (hr?.memoCastUrl||br?.memoCastUrl);
+        })" style="text-align:center;padding:3rem 1rem;color:#6b7280">
+          <div style="font-size:3rem;margin-bottom:0.75rem">🎙️</div>
+          <div style="font-weight:700;font-size:1rem;color:#374151;margin-bottom:0.4rem">No memos linked yet</div>
+          <div style="font-size:0.85rem">Add Memo Book, Slide, or MemoCast URLs inside Weekly Planner → Study Memos section.</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ARENA -->
     <div v-if="activeTab==='arena'">
       <div v-if="arenaState.phase==='idle'" style="max-width:580px;margin:0 auto;text-align:center;padding:2rem 1rem">
@@ -2214,6 +2361,7 @@ const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 createApp({
   setup() {
     const activeTab = ref('dashboard');
+    const memoFilter  = ref('all');
     const showPrintDialog = ref(false);
     const showPasteModal  = ref(false);
     const pasteJsonText   = ref('');
@@ -2312,6 +2460,7 @@ createApp({
       {id:'dashboard',icon:'🏠',label:'Dashboard'},
       {id:'planner',icon:'📅',label:'Weekly Planner'},
       {id:'books',icon:'📚',label:'Book Log'},
+      {id:'memos',icon:'🎙️',label:'Memo Collection'},
       {id:'notebook',icon:'📓',label:'Portfolio'},
       {id:'arena',icon:'⚔️',label:'Review Arena'},
       {id:'progress',icon:'📊',label:'Progress'}
@@ -2422,7 +2571,7 @@ createApp({
               {q:"What is an artifact?",opts:['A type of cave','An object made or used by humans in the past','A wild plant','A fossilized dinosaur bone'],correct:1,answer:1,explain:"Artifacts are tools, pottery, beads, or weapons made by humans.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()},
               {q:"Where are the famous Lascaux cave paintings located?",opts:['Egypt','Spain','France','Greece'],correct:2,answer:2,explain:"Lascaux is in southwestern France.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()}
             ],
-            reviewResources:{summary:'Paleolithic era covered early human survival with stone tools, nomadism, mastery of fire and Lascaux cave paintings.',slidesUrl:'',videoUrl:'',audioUrl:''}
+            reviewResources:{memoBookUrl:'',memoSlideUrl:'',memoCastUrl:''}
           }
         },
         biology:{
@@ -2462,7 +2611,7 @@ createApp({
               {q:"What tool do biologists use to see tardigrades?",opts:['Telescope','Microscope','Stethoscope','Periscope'],correct:1,answer:1,explain:"Microscopes magnify tiny organisms.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()},
               {q:"What makes tardigrades special in science?",opts:['They can fly','They survive extreme radiation, vacuum, and boiling heat','They talk','They are immortal'],correct:1,answer:1,explain:"They are among the most resilient creatures known.",streak:1,timesAnswered:1,lastReviewed:new Date().toISOString()}
             ],
-            reviewResources:{summary:'Tardigrades are microscopic 8-legged animals renowned for extreme resilience via cryptobiosis.',slidesUrl:'',videoUrl:'',audioUrl:''}
+            reviewResources:{memoBookUrl:'',memoSlideUrl:'',memoCastUrl:''}
           }
         },
         math:{topic:'Beast Academy 4A — Shapes & Angles',weeklyTarget:'30–45 min daily',status:'completed',timeSpent:'195 min',starsAndTrophies:'22 stars',lessonsCompleted:'4A Ch.1 Shapes Practice\n4A Ch.1 Chapter Test',workImages:[],showSupplements:false,supplements:''},
@@ -2586,7 +2735,7 @@ createApp({
       if (currentWeek.value !== idx) currentWeek.value = idx;
       const w = weeks[idx];
       if (w && !w.subjects) w.subjects = {};
-      if (w && !w.subjects.history) w.subjects.history = {topic:'',status:'pending',core:{historyQuestUnit:'',historyHop:'',uewh:'',notes:''},enrichment:[],activities:{travelLog:{done:false,notes:''},mapActivity:{done:false,description:'',notes:''},craft:{done:false,description:'',supplies:'',notes:''},notebook:{activeTab:'bigideas',bigIdeas:[],details:[],questions:[],copywork:{text:'',done:false},workImages:[]}},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:'',audioUrl:''}}};
+      if (w && !w.subjects.history) w.subjects.history = {topic:'',status:'pending',core:{historyQuestUnit:'',historyHop:'',uewh:'',notes:''},enrichment:[],activities:{travelLog:{done:false,notes:''},mapActivity:{done:false,description:'',notes:''},craft:{done:false,description:'',supplies:'',notes:''},notebook:{activeTab:'bigideas',bigIdeas:[],details:[],questions:[],copywork:{text:'',done:false},workImages:[]}},quiz:{submitted:false,score:0,questions:[],reviewResources:{memoBookUrl:'',memoSlideUrl:'',memoCastUrl:''}}};
       // Ensure copywork exists on existing weeks (guard for data from older schema)
       if (w?.subjects?.history?.activities?.notebook) {
         const nb = w.subjects.history.activities.notebook;
@@ -2598,7 +2747,16 @@ createApp({
         // Switch activeTab away from removed tabs
         if (nb.activeTab === 'terms' || nb.activeTab === 'narration' || nb.activeTab === 'photos') nb.activeTab = 'bigideas';
       }
-      if (w && !w.subjects.biology) w.subjects.biology = {topic:'',status:'pending',core:{rsoUnit:'',generationGenius:'',notes:''},generationGenius:'',ggVideos:[],enrichment:[],labs:[],notebook:{activeTab:'bigideas',terms:[],bigIdeas:[],smallStuff:[],workImages:[]},quiz:{submitted:false,score:0,questions:[],reviewResources:{summary:'',slidesUrl:'',videoUrl:'',audioUrl:''}}};
+      if (w && !w.subjects.biology) w.subjects.biology = {topic:'',status:'pending',core:{rsoUnit:'',generationGenius:'',notes:''},generationGenius:'',ggVideos:[],enrichment:[],labs:[],notebook:{activeTab:'bigideas',terms:[],bigIdeas:[],smallStuff:[],workImages:[]},quiz:{submitted:false,score:0,questions:[],reviewResources:{memoBookUrl:'',memoSlideUrl:'',memoCastUrl:''}}};
+      // Memo migration: remap legacy reviewResources fields to new memo schema
+      const _migRR = (rr) => {
+        if (!rr) return;
+        if (rr.memoBookUrl === undefined) rr.memoBookUrl  = '';
+        if (rr.memoSlideUrl === undefined) rr.memoSlideUrl = rr.slidesUrl || '';
+        if (rr.memoCastUrl === undefined)  rr.memoCastUrl  = rr.audioUrl  || '';
+      };
+      if (w?.subjects?.history?.quiz?.reviewResources) _migRR(w.subjects.history.quiz.reviewResources);
+      if (w?.subjects?.biology?.quiz?.reviewResources) _migRR(w.subjects.biology.quiz.reviewResources);
       if (w?.subjects?.biology && !Array.isArray(w.subjects.biology.ggVideos)) { w.subjects.biology.ggVideos = w.subjects.biology.core?.generationGenius ? [{topic:w.subjects.biology.core.generationGenius,watched:false,date:''}] : []; }
       if (w && !w.subjects.math)    w.subjects.math    = {topic:'',weeklyTarget:'',status:'pending',timeSpent:'',starsAndTrophies:'',lessonsCompleted:'',workImages:[],showSupplements:false,supplements:''};
       if (w && !w.subjects.ela) w.subjects.ela = {topic:'',status:'pending',reading:{book:"Charlotte's Web",chapters:'',notes:''},writing:{program:'IEW / Oakschool',lesson:'',styleFocus:'',studentDraft:'',workSample:{url:'',caption:''}},grammar:{mctTopic:'',punctuationTopic:'',notes:''},spelling:{lessonRule:'',score:''},vocabulary:{words:'',notes:''}};
@@ -3097,7 +3255,7 @@ createApp({
       const bq = () => ({
         submitted:false,score:0,
         questions:Array(5).fill(null).map(()=>({q:'',opts:['','','',''],correct:0,answer:null,explain:'',streak:0,timesAnswered:0,lastReviewed:null})),
-        reviewResources:{summary:'',slidesUrl:'',videoUrl:'',audioUrl:''}
+        reviewResources:{memoBookUrl:'',memoSlideUrl:'',memoCastUrl:''}
       });
 
       weeks.push({
@@ -3178,7 +3336,7 @@ createApp({
         questions: Array(5).fill(null).map(() => ({
           q:'', opts:['','','',''], correct:0, answer:null, explain:'', streak:0, timesAnswered:0, lastReviewed:null
         })),
-        reviewResources: { summary:'', slidesUrl:'', videoUrl:'',audioUrl:'' }
+        reviewResources: { memoBookUrl:'', memoSlideUrl:'', memoCastUrl:'' }
       });
 
       const makeEmptyWeek = (num, monDate) => {
@@ -3311,6 +3469,15 @@ createApp({
             if (!e.spelling)   e.spelling   = {lessonRule:'',score:''};
             if (!e.vocabulary) e.vocabulary = {words:'',notes:''};
             if (!e.reviewResources) e.reviewResources = {summary:'',videoUrl:'',slidesUrl:'',audioUrl:''};
+          // Memo migration: remap legacy reviewResources → new memo URL fields
+          const _mig = (rr) => {
+            if (!rr) return;
+            if (rr.memoBookUrl === undefined) rr.memoBookUrl  = '';
+            if (rr.memoSlideUrl === undefined) rr.memoSlideUrl = rr.slidesUrl || '';
+            if (rr.memoCastUrl === undefined)  rr.memoCastUrl  = rr.audioUrl  || '';
+          };
+          if (w.subjects.history?.quiz?.reviewResources) _mig(w.subjects.history.quiz.reviewResources);
+          if (w.subjects.biology?.quiz?.reviewResources) _mig(w.subjects.biology.quiz.reviewResources);
           }
           // Math v5→v6 migration: add Beast Academy fields
           if (w.subjects.math) {
@@ -3975,7 +4142,7 @@ createApp({
     };
 
     return {
-      activeTab, activeSubjTab, saving, syncStatus, currentWeek, sec, tabs,
+      activeTab, memoFilter, activeSubjTab, saving, syncStatus, currentWeek, sec, tabs,
       currentRole, showPinModal, pinInput, pinError, targetRole, switchRole, confirmPin, cancelPin,
       accessLogs, showAccessLogs, fetchAccessLogs,
       showPrintDialog, triggerPrint,
