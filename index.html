@@ -748,10 +748,16 @@
                       🧪 Preview Quiz
                     </button>
                     <!-- Student button -->
-                    <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'history',false)"
-                      style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #7c3aed33">
-                      🚀 Start Quiz
-                    </button>
+                    <template v-if="currentRole==='student'">
+                      <button v-if="(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions).length"
+                        @click="startWeekQuiz(cw,'history',false)"
+                        style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #7c3aed33">
+                        🚀 Start Quiz
+                      </button>
+                      <span v-else style="font-size:0.78rem;color:#9ca3af;background:#f3f4f6;padding:0.4rem 0.75rem;border-radius:0.5rem;font-style:italic">
+                        No questions added yet
+                      </span>
+                    </template>
                   </div>
                 </div>
                 <div v-if="cw.subjects.history.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#f5f3ff;border-radius:0.625rem;font-size:0.8rem;color:#5b21b6;display:flex;align-items:center;gap:0.5rem">
@@ -992,10 +998,16 @@
                       🧪 Preview Quiz
                     </button>
                     <!-- Student button -->
-                    <button v-if="currentRole==='student'" @click="startWeekQuiz(cw,'biology',false)"
-                      style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #2563eb33">
-                      🚀 Start Quiz
-                    </button>
+                    <template v-if="currentRole==='student'">
+                      <button v-if="(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions).length"
+                        @click="startWeekQuiz(cw,'biology',false)"
+                        style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #2563eb33">
+                        🚀 Start Quiz
+                      </button>
+                      <span v-else style="font-size:0.78rem;color:#9ca3af;background:#f3f4f6;padding:0.4rem 0.75rem;border-radius:0.5rem;font-style:italic">
+                        No questions added yet
+                      </span>
+                    </template>
                   </div>
                 </div>
                 <div v-if="cw.subjects.biology.quiz.lastScore!=null" style="margin-top:0.75rem;padding:0.6rem 0.875rem;background:#eff6ff;border-radius:0.625rem;font-size:0.8rem;color:#1e40af;display:flex;align-items:center;gap:0.5rem">
@@ -2924,7 +2936,10 @@ createApp({
       const quiz = weekObj.subjects[subject].quiz;
       const label = subject === 'history' ? 'History' : 'Biology';
       const picked = _pickFromBank(quiz, 10);
-      if (!picked.length) return;
+      if (!picked.length) {
+        console.warn('[Quiz] No questions in bank for', label, '— quiz cannot start.');
+        return;
+      }
       // Log quiz open (before state mutation so role is still current)
       _logAccess('Opened ' + label + ' Quiz · Week ' + weekObj.weekNum);
       weekQuizState._weekRef = weekObj;
