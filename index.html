@@ -733,7 +733,7 @@
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
                   <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
-                    <span style="font-weight:700;color:#7c3aed">{{(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
+                    <span style="font-weight:700;color:#7c3aed">{{(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions||[]).length}}</span> questions in bank · Quiz picks 10 adaptively
                   </div>
                   <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                     <!-- Admin buttons: Preview + Reset -->
@@ -749,7 +749,7 @@
                     </button>
                     <!-- Student button -->
                     <template v-if="currentRole==='student'">
-                      <button v-if="(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions).length"
+                      <button v-if="(cw.subjects.history.quiz.questionBank||cw.subjects.history.quiz.questions||[]).length"
                         @click="startWeekQuiz(cw,'history',false)"
                         style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #7c3aed33">
                         🚀 Start Quiz
@@ -983,7 +983,7 @@
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
                   <div style="font-size:0.82rem;color:#6b7280;line-height:1.5">
-                    <span style="font-weight:700;color:#2563eb">{{(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions).length}}</span> questions in bank · Quiz picks 10 adaptively
+                    <span style="font-weight:700;color:#2563eb">{{(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions||[]).length}}</span> questions in bank · Quiz picks 10 adaptively
                   </div>
                   <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                     <!-- Admin buttons: Preview + Reset -->
@@ -999,7 +999,7 @@
                     </button>
                     <!-- Student button -->
                     <template v-if="currentRole==='student'">
-                      <button v-if="(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions).length"
+                      <button v-if="(cw.subjects.biology.quiz.questionBank||cw.subjects.biology.quiz.questions||[]).length"
                         @click="startWeekQuiz(cw,'biology',false)"
                         style="padding:0.5rem 1.25rem;background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;border-radius:0.75rem;font-size:0.88rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px #2563eb33">
                         🚀 Start Quiz
@@ -3075,8 +3075,14 @@ createApp({
       showAddBookModal.value = false;
     };
     const toggleBook = (bi) => { expandedBooks[bi] = !expandedBooks[bi]; };
-    // Migrate legacy 'enrichment' subject value → 'other'
-    books.forEach(b => { if (b.subject === 'enrichment') b.subject = 'other'; });
+    // Book subject migration: remap legacy subject ids to current SUBJECTS config
+    // Defined here (not inside onMounted) so importData/applyPastedJson can call it too.
+    const _migrateBookSubjects = () => {
+      const MAP = { biology:'science', ela:'literature', enrichment:'other' };
+      books.forEach(b => { if (MAP[b.subject]) b.subject = MAP[b.subject]; });
+    };
+    // Run once immediately to clean up any legacy values in default/cached books
+    _migrateBookSubjects();
     const setRating = (bk, s) => { if (currentRole.value !== 'guest') bk.rating = s; };
     const setDraftRating = (s) => { newBookDraft.rating = s; };
 
@@ -3805,7 +3811,10 @@ createApp({
         if (!d.weeks?.length) return false;
         // Surgical in-place merge — preserves Vue DOM bindings, no cursor jump
         _deepMerge(weeks, d.weeks);
-        if (Array.isArray(d.books))        _deepMerge(books, d.books);
+        // Only apply Firestore books if there are actual books to apply.
+        // An empty books array in Firestore (books:[]) must NOT clear the in-memory list —
+        // it causes a death-spiral where defaults get wiped and re-saved as empty every load.
+        if (Array.isArray(d.books) && d.books.length > 0) _deepMerge(books, d.books);
         if (Array.isArray(d.quizResults))  _deepMerge(quizResults, d.quizResults);
         if (Array.isArray(d.annualGoals))  _deepMerge(annualGoals, d.annualGoals);
         if (Array.isArray(d.lpMeetings))   _deepMerge(lpMeetings, d.lpMeetings);
@@ -3823,12 +3832,6 @@ createApp({
           if (!raw) return false;
           return _applyData(JSON.parse(raw));
         } catch(e) { return false; }
-      };
-
-      // ── Book subject migration: remap old ids to new SUBJECTS config ──
-      const _migrateBookSubjects = () => {
-        const MAP = { biology:'science', ela:'literature', other:'free_reading' };
-        books.forEach(b => { if (MAP[b.subject]) b.subject = MAP[b.subject]; });
       };
 
       // ── 1. Immediate load from localStorage ──────────────────────────
