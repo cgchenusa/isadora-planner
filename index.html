@@ -47,7 +47,7 @@
     .rr-link-pill{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.75rem;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:0.2rem 0.65rem;text-decoration:none;margin-top:0.35rem;word-break:break-all}
     .rr-link-pill:hover{background:#dbeafe}
     .rr-audio{width:100%;display:block;border-radius:0.5rem;margin-top:0.35rem;accent-color:#7c3aed}
-    .student-lock{background:#f9fafb!important;color:#9ca3af!important;cursor:not-allowed!important;resize:none!important}
+    .student-lock{background:transparent!important;color:inherit!important;-webkit-text-fill-color:inherit!important;opacity:1!important;cursor:default!important;border-color:transparent!important;box-shadow:none!important;resize:none!important}
     .dash-card{background:#fff;border-radius:0.875rem;border:1px solid #f3f4f6;box-shadow:0 1px 4px #0001;padding:1.25rem}
 
     /* ============================================================
@@ -1226,7 +1226,7 @@
               </div>
               <div style="margin-bottom:0.6rem">
                 <div style="font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:0.25rem">Student Draft / Writing Sample</div>
-                <textarea :disabled="currentRole==='student'" :class="{'student-lock':currentRole==='student'}" v-model="cw.subjects.ela.writing.studentDraft" rows="4" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.65;font-family:Georgia,serif" placeholder="Paste or type Isadora's writing sample here…"></textarea>
+                <textarea :disabled="currentRole==='guest'" v-model="cw.subjects.ela.writing.studentDraft" rows="4" style="width:100%;font-size:0.82rem;border:1px solid #fde68a;border-radius:0.45rem;padding:0.4rem 0.65rem;outline:none;box-sizing:border-box;background:#fff;line-height:1.65;font-family:Georgia,serif" placeholder="Paste or type Isadora's writing sample here…"></textarea>
               </div>
               <!-- Writing sample image upload -->
               <div style="background:#fffbeb;border:1px dashed #fde68a;border-radius:0.5rem;padding:0.75rem">
