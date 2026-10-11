@@ -137,6 +137,26 @@ async function updateRow(table, id, updates) {
     }
 }
 
+async function updateRowBy(table, column, value, updates) {
+    try {
+        const client = getSupabase();
+        if (!client) throw new Error('Supabase client not initialized');
+
+        const { data, error } = await client
+            .from(table)
+            .update(updates)
+            .eq(column, value)
+            .select();
+
+        if (error) throw error;
+        console.log(`✅ Row updated in ${table} where ${column}=${value}:`, data);
+        return data;
+    } catch (err) {
+        console.error(`❌ Error updating ${table} where ${column}=${value}:`, err.message);
+        return null;
+    }
+}
+
 async function upsertRow(table, matchColumn, matchValue, rowData) {
     try {
         const client = getSupabase();
@@ -275,6 +295,69 @@ async function authSignOut() {
     await client.auth.signOut();
 }
 
+async function getMyProfile() {
+    try {
+        const client = getSupabase();
+        if (!client) return null;
+        const { data: userData, error: userErr } = await client.auth.getUser();
+        if (userErr || !userData?.user) return null;
+        const { data, error } = await client
+            .from('profiles')
+            .select('*')
+            .eq('id', userData.user.id)
+            .single();
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error('❌ Error fetching my profile:', err.message);
+        return null;
+    }
+}
+
+async function listProfiles() {
+    try {
+        const client = getSupabase();
+        if (!client) return [];
+        const { data, error } = await client
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: true });
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('❌ Error listing profiles:', err.message);
+        return [];
+    }
+}
+
+async function createMember({ email, password, role, display_name }) {
+    try {
+        const client = getSupabase();
+        if (!client) return { error: { message: 'Supabase client not initialized' } };
+        const { data, error } = await client.functions.invoke('create-member', {
+            body: { email, password, role, display_name }
+        });
+        if (error) {
+            // supabase-js wraps non-2xx responses in a generic error; try to recover the real message
+            let message = error.message || 'Failed to create member';
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    if (body?.error) message = body.error;
+                } catch (_) { /* ignore */ }
+            }
+            return { error: { message } };
+        }
+        if (data?.error) {
+            return { error: { message: data.error } };
+        }
+        return { data };
+    } catch (err) {
+        console.error('❌ Error creating member:', err.message);
+        return { error: { message: err.message } };
+    }
+}
+
 async function anyProfilesExist() {
     try {
         const client = getSupabase();
@@ -298,6 +381,7 @@ window.MemoSphereSupabase = {
     getRowById,
     insertRow,
     updateRow,
+    updateRowBy,
     upsertRow,
     deleteRow,
     deleteWhere,
@@ -307,7 +391,10 @@ window.MemoSphereSupabase = {
     authSignIn,
     authSignUp,
     authSignOut,
-    anyProfilesExist
+    anyProfilesExist,
+    getMyProfile,
+    listProfiles,
+    createMember
 };
 
 console.log('✅ MemoSphere Supabase utilities loaded');
