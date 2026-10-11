@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemoSphere - Phase 2: Learning Management</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- MemoSphere Supabase Utilities -->
+    <script src="utils/supabase.js"></script>
+
+    <style>
+        [v-cloak] { display: none; }
+        .tab-button { transition: all 0.3s ease; }
+        .tab-button.active { border-bottom: 3px solid #9333ea; color: #9333ea; }
+        .task-item { animation: slideIn 0.2s ease; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-blue-50">
+    <div id="app" v-cloak>
+        <!-- Auth gate: login / sign up screen -->
+        <div v-if="authChecked && !session" class="min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-sm">
+                <h1 class="text-2xl font-bold text-purple-600 text-center mb-1">MemoSphere</h1>
+                <p class="text-gray-500 text-sm text-center mb-6">{{ authMode === 'login' ? 'Sign in to continue' : 'Create the parent account' }}</p>
+
+                <div v-if="authError" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded px-3 py-2 mb-4">{{ authError }}</div>
+
+                <form @submit.prevent="authMode === 'login' ? signIn() : signUp()">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input v-model="authEmail" type="email" required autocomplete="email"
+                        class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-400">
+
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input v-model="authPassword" type="password" required
+                        :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'"
+                        class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-400">
+
+                    <div v-if="authMode === 'signup'">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+                        <input v-model="authPassword2" type="password" required autocomplete="new-password"
+                            class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+
+                    <button type="submit" :disabled="authLoading"
+                        class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium rounded px-3 py-2 transition">
+                        {{ authLoading ? 'Please wait…' : (authMode === 'login' ? 'Sign In' : 'Create Account') }}
+                    </button>
+                </form>
+
+                <p v-if="authMode === 'login' && signupAllowed" class="text-center text-sm text-gray-500 mt-4">
+                    First time here?
+                    <button @click="authMode = 'signup'; authError = ''" class="text-purple-600 hover:underline">Create the parent account</button>
+                </p>
+                <p v-if="authMode === 'signup'" class="text-center text-sm text-gray-500 mt-4">
+                    <button @click="authMode = 'login'; authError = ''" class="text-purple-600 hover:underline">Back to sign in</button>
+                </p>
+            </div>
+        </div>
+
+        <!-- Main app (only once authenticated) -->
+        <template v-if="session">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-purple-600">MemoSphere</h1>
+                        <p class="text-gray-600 text-sm mt-1">Phase 2: Learning Management System</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div v-if="appConfig" class="flex items-center gap-3 bg-purple-50 rounded-lg px-4 py-2 border border-purple-200">
+                            <span class="text-sm">🐉 Lv.{{ appConfig.dragon_level }}</span>
+                            <span class="text-sm">🪙 {{ appConfig.coins }}</span>
+                            <span class="text-sm text-gray-500">{{ appConfig.school_year }}</span>
+                        </div>
+                        <p class="text-sm text-green-600" v-if="isConnected">
+                            <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>Connected
+                        </p>
+                        <p class="text-sm text-yellow-600" v-else>
+                            <span class="inline-block w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>Connecting...
+                        </p>
+                        <button @click="signOut" class="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 rounded px-3 py-1">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+            <!-- Tab Navigation -->
+            <div class="bg-white rounded-t-lg shadow mb-0">
+                <nav class="flex space-x-8 px-6 py-4 overflow-x-auto" aria-label="Tabs">
+                    <button @click="currentTab = 'dashboard'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'dashboard' ? 'active' : 'text-gray-600 hover:text-gray-900']">📊 Dashboard</button>
+                    <button @click="currentTab = 'planner'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'planner' ? 'active' : 'text-gray-600 hover:text-gray-900']">🗂️ Planner</button>
+                    <button @click="currentTab = 'subjects'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'subjects' ? 'active' : 'text-gray-600 hover:text-gray-900']">📚 Subjects</button>
+                    <button @click="currentTab = 'quizzes'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'quizzes' ? 'active' : 'text-gray-600 hover:text-gray-900']">🧠 Quizzes</button>
+                    <button @click="currentTab = 'books'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'books' ? 'active' : 'text-gray-600 hover:text-gray-900']">📖 Books</button>
+                    <button @click="currentTab = 'review'; computeReviewSession()" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'review' ? 'active' : 'text-gray-600 hover:text-gray-900']">🔁 Review <span v-if="dueReviews.length" class="ml-1 bg-red-500 text-white text-xs rounded-full px-2">{{ dueReviews.length }}</span></button>
+                </nav>
+            </div>
+
+            <div v-if="globalError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-4">❌ {{ globalError }}</div>
+
+            <!-- DASHBOARD -->
+            <div v-if="currentTab === 'dashboard'" class="bg-white rounded-b-lg shadow-lg p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">📊 Dashboard</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-200">
+                        <p class="text-gray-600 text-sm">Total Weeks</p>
+                        <p class="text-4xl font-bold text-blue-600 mt-2">{{ weeks.length }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border-2 border-green-200">
+                        <p class="text-gray-600 text-sm">Active Week Subjects</p>
+                        <p class="text-4xl font-bold text-green-600 mt-2">{{ activeWeekSubjects.length }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border-2 border-purple-200">
+                        <p class="text-gray-600 text-sm">Hours This Week</p>
+                        <p class="text-4xl font-bold text-purple-600 mt-2">{{ activeWeekHours }}</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-1">
+                        📅 Active Week
+                        <span v-if="activeWeek" class="text-base font-normal text-gray-500">— Week {{ activeWeek.week_number }} ({{ formatDateUS(activeWeek.start_date) }} to {{ formatDateUS(activeWeek.end_date) }})</span>
+                    </h3>
+
+                    <div v-if="!activeWeek" class="text-center py-8 text-gray-600">No active week. Mark a week "in progress" in the Subjects tab. ➡️</div>
+
+                    <div v-else-if="activeWeekSubjects.length === 0" class="text-center py-8 text-gray-600">No subjects yet for this week. Add one in the Subjects tab! ➡️</div>
+
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div v-for="(subject, index) in activeWeekSubjects" :key="subject.id" class="bg-white rounded-lg p-4 border-l-4" :style="{ borderLeftColor: getSubjectColor(subject) }">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-gray-800">{{ getSubjectEmoji(subject) }} {{ subject.subject_name }}</h4>
+                                <span :class="statusBadgeClass(subject.status)">{{ statusLabel(subject.status) }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1" v-if="subject.topic">{{ subject.topic }}</p>
+                            <p class="text-sm text-gray-500 mt-1">{{ subject.time_spent_hours || 0 }}h this week</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <!-- Academic Calendar -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">🗓️ Academic Calendar</h3>
+                        <p class="text-sm text-gray-500 mb-4">{{ academicCalendar.source }} — {{ academicCalendar.schoolYear }}</p>
+                        <ul class="space-y-2">
+                            <li v-for="d in upcomingKeyDates" :key="d.label" class="flex items-center justify-between text-sm" :class="d.isPast ? 'opacity-40' : ''">
+                                <span class="text-gray-700">{{ d.label }}</span>
+                                <span class="flex items-center gap-2">
+                                    <span class="text-gray-500">{{ formatDateRange(d.date, d.endDate) }}</span>
+                                    <span v-if="!d.isPast" class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="keyDateBadge(d) === 'Today' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'">{{ keyDateBadge(d) }}</span>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Learning Periods -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">📘 Learning Periods (LP)</h3>
+                        <p class="text-sm text-gray-500 mb-4" v-if="currentLearningPeriod">Currently in LP {{ currentLearningPeriod.number }} of 10 ({{ formatDateRange(currentLearningPeriod.start, currentLearningPeriod.end) }})</p>
+                        <p class="text-sm text-gray-500 mb-4" v-else>No active Learning Period right now.</p>
+
+                        <div class="flex flex-wrap gap-1.5 mb-5">
+                            <span v-for="lp in academicCalendar.learningPeriods" :key="lp.number"
+                                  class="text-xs font-semibold w-8 h-8 flex items-center justify-center rounded-full"
+                                  :class="currentLearningPeriod && currentLearningPeriod.number === lp.number ? 'bg-indigo-600 text-white' : (lp.end < todayISO ? 'bg-gray-200 text-gray-400' : 'bg-indigo-100 text-indigo-700')"
+                                  :title="formatDateRange(lp.start, lp.end)">{{ lp.number }}</span>
+                        </div>
+
+                        <h4 class="text-sm font-bold text-gray-700 mb-2">LP Meetings (Semester 1)</h4>
+                        <ul class="space-y-1.5">
+                            <li v-for="m in academicCalendar.lpMeetings" :key="m.lp" class="flex items-center justify-between text-sm" :class="m.date < todayISO ? 'opacity-40' : ''">
+                                <span class="text-gray-700">LP{{ m.lp }} Meeting</span>
+                                <span class="flex items-center gap-2">
+                                    <span class="text-gray-500">{{ formatDateShort(m.date) }}, {{ m.time }}</span>
+                                    <span v-if="nextLpMeeting && nextLpMeeting.lp === m.lp" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Next</span>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLANNER -->
+            <div v-if="currentTab === 'planner'" class="bg-white rounded-b-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">🗂️ Planner — Year Progress</h2>
+
+                <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-gray-700">{{ yearProgressStats.completed }} of {{ yearProgressStats.total }} weeks completed</span>
+                        <span class="text-2xl font-bold text-purple-600">{{ yearProgressStats.pct }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="bg-purple-600 h-3 rounded-full transition-all" :style="{ width: yearProgressStats.pct + '%' }"></div>
+                    </div>
+                </div>
+
+                <div v-if="weekProgressList.length === 0" class="text-center py-12 bg-gray-50 rounded-lg text-gray-600">No weeks yet.</div>
+                <div v-else class="space-y-2">
+                    <div v-for="w in weekProgressList" :key="w.id" class="flex items-center gap-3 bg-gray-50 rounded-lg p-3 flex-wrap">
+                        <span class="w-20 text-sm font-semibold text-gray-700">Week {{ w.week_number }}</span>
+                        <span class="w-28 text-xs text-gray-500">{{ formatDateUS(w.start_date) }}</span>
+                        <div class="flex-1 min-w-[100px] bg-gray-200 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full transition-all" :class="w.pct === 100 ? 'bg-green-500' : 'bg-blue-500'" :style="{ width: w.pct + '%' }"></div>
+                        </div>
+                        <span class="w-16 text-xs text-gray-600 text-right">{{ w.subjectsCompleted }}/{{ w.subjectsTotal }} subj.</span>
+                        <span class="w-10 text-xs font-semibold text-gray-700 text-right">{{ w.pct }}%</span>
+                        <span :class="statusBadgeClass(w.status)">{{ statusLabel(w.status) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBJECTS -->
+            <div v-if="currentTab === 'subjects'" class="bg-white rounded-b-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">📚 Subjects</h2>
+
+                <!-- Week pill selector -->
+                <div class="flex items-center gap-2 flex-wrap mb-6">
+                    <span class="text-sm font-medium text-gray-600 mr-1">Select Week:</span>
+                    <button v-for="week in weeks" :key="week.id" @click="selectedWeekId = week.id; selectedWeekSubjectId = null" :class="weekPillClass(week)">{{ week.week_number }}</button>
+                    <button @click="addWeekFormOpen = !addWeekFormOpen" class="ml-auto bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition">➕ Add Week</button>
+                </div>
+
+                <div v-if="addWeekFormOpen" class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-6 border-2 border-purple-200">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">➕ Add New Week</h3>
+                    <form @submit.prevent="addWeek" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Week #</label>
+                                <input v-model.number="newWeek.week_number" type="number" min="1" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                                <input v-model="newWeek.start_date" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
+                                <input v-model="newWeek.end_date" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" :disabled="isLoading" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition">
+                                    {{ isLoading ? '⏳' : '✨ Create' }}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <div v-if="error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ {{ error }}</div>
+                </div>
+
+                <div v-if="!selectedWeekId" class="text-center py-12 bg-gray-50 rounded-lg text-gray-600">Create a week first! ➡️</div>
+
+                <template v-else>
+                    <!-- Week header -->
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 flex justify-between items-center flex-wrap gap-3 mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">Week {{ selectedWeek.week_number }}</h3>
+                            <p class="text-sm text-gray-500">🗓️ {{ formatDateUS(selectedWeek.start_date) }} – {{ formatDateUS(selectedWeek.end_date) }}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select :value="selectedWeek.status" @change="setWeekStatus(selectedWeek, $event.target.value)" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                <option value="not_started">Not Started</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                            <button @click="deleteWeek(selectedWeek.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition" title="Delete week">🗑️</button>
+                        </div>
+                    </div>
+
+                    <!-- Subject pill tabs -->
+                    <div class="flex items-center gap-2 flex-wrap border-b border-gray-200 pb-4 mb-6">
+                        <button v-for="(subject, index) in subjectsForSelectedWeek" :key="subject.id" @click="selectedWeekSubjectId = subject.id" :class="subjectTabClass(subject, index)">
+                            {{ getSubjectEmoji(subject) }} {{ subject.subject_name }}
+                        </button>
+                        <button @click="showAddSubjectForm = !showAddSubjectForm" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm font-semibold transition">➕ Add Subject</button>
+                        <button v-if="subjectTemplates.length > 0" @click="loadWeekFromTemplates" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition" title="Creates this week's subjects pre-filled with each subject's latest saved curriculum/resources">📋 Load from Templates</button>
+                    </div>
+
+                    <div v-if="showAddSubjectForm" class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-6 border-2 border-purple-200">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">➕ Add Subject to Week {{ selectedWeek.week_number }}</h3>
+                        <form @submit.prevent="addSubject" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject Name *</label>
+                                    <input v-model="newSubject.subject_name" type="text" list="subjectSuggestions" placeholder="e.g., Math" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                                    <datalist id="subjectSuggestions">
+                                        <option value="Math"></option><option value="History"></option><option value="Biology"></option><option value="ELA"></option><option value="LP / Tutor"></option>
+                                    </datalist>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Chapter / Topic</label>
+                                    <input v-model="newSubject.topic" type="text" placeholder="e.g., Unit 9: Babylon" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                                </div>
+                            </div>
+                            <button type="submit" :disabled="isLoading" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition">
+                                {{ isLoading ? '⏳ Creating...' : '✨ Add Subject' }}
+                            </button>
+                        </form>
+                        <div v-if="error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ {{ error }}</div>
+                        <div v-if="successMessage" class="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">✅ {{ successMessage }}</div>
+                    </div>
+
+                    <div v-if="subjectsForSelectedWeek.length === 0" class="text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-600 text-lg">No subjects yet for this week</p></div>
+
+                    <!-- Single subject detail view -->
+                    <div v-else-if="currentWeekSubject" class="space-y-3">
+                        <div class="bg-white p-4 rounded-lg border border-gray-200 flex justify-between items-start flex-wrap gap-2">
+                            <div>
+                                <h4 class="font-bold text-xl text-gray-800">{{ currentWeekSubject.subject_name }}</h4>
+                                <p v-if="currentWeekSubject.time_spent_hours" class="text-sm text-gray-500">{{ currentWeekSubject.time_spent_hours }}h planned</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select :value="currentWeekSubject.status" @change="setSubjectStatus(currentWeekSubject, $event.target.value)" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                    <option value="not_started">Not Started</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                                <button @click="deleteSubject(currentWeekSubject.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition">🗑️</button>
+                            </div>
+                        </div>
+
+                        <!-- Chapter / Topic badge -->
+                        <div v-if="currentWeekSubject.topic" class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                            <p class="text-xs font-semibold text-purple-600 mb-1">{{ currentWeekSubject.subject_name.toUpperCase() }} CHAPTER / TOPIC</p>
+                            <p class="text-xl font-bold text-gray-800">{{ currentWeekSubject.topic }}</p>
+                        </div>
+
+                        <!-- Core Curriculum: generic dynamic fields for most subjects -->
+                        <div v-if="subjectKind(currentWeekSubject) !== 'ela' && subjectKind(currentWeekSubject) !== 'electives'" class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'core_curriculum')">
+                                <p class="text-xs font-semibold text-slate-600">📘 CORE CURRICULUM</p>
+                                <span class="text-xs text-slate-500">{{ isSectionOpen(currentWeekSubject.id, 'core_curriculum') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'core_curriculum')" class="mt-2 space-y-2">
+                                <div v-for="(field, fi) in getCoreFields(currentWeekSubject)" :key="fi" class="bg-white rounded border border-slate-200 p-2">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <input :value="field.label" @change="updateCoreField(currentWeekSubject, fi, 'label', $event.target.value)" type="text" placeholder="Field name (e.g., UEWH Reading)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-base font-bold text-slate-700" />
+                                        <button @click="removeCoreField(currentWeekSubject, fi)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    </div>
+                                    <textarea :value="field.value" @change="updateCoreField(currentWeekSubject, fi, 'value', $event.target.value)" rows="1" placeholder="Value / notes for this field..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                </div>
+                                <button @click="addCoreField(currentWeekSubject)" class="bg-slate-500 hover:bg-slate-600 text-white px-3 py-1 rounded text-sm">➕ Add Field</button>
+                            </div>
+                        </div>
+
+                        <!-- Core Curriculum: ELA segmented blocks (Literature / Writing / Grammar / Spelling) -->
+                        <div v-else-if="subjectKind(currentWeekSubject) === 'ela'" class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'core_curriculum')">
+                                <p class="text-xs font-semibold text-slate-600">📘 CORE CURRICULUM</p>
+                                <span class="text-xs text-slate-500">{{ isSectionOpen(currentWeekSubject.id, 'core_curriculum') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'core_curriculum')" class="mt-2 space-y-3">
+                                <div v-for="seg in getElaSegments(currentWeekSubject)" :key="seg.key" class="bg-white rounded border border-slate-200 p-3">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <input type="checkbox" :checked="seg.done" @change="toggleElaSegmentDone(currentWeekSubject, seg.key)" />
+                                        <p class="font-semibold text-sm text-slate-700">{{ seg.title }}</p>
+                                    </div>
+
+                                    <div v-if="seg.key === 'literature'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Novel / Book Title</label>
+                                            <input :value="seg.novel_title" @change="updateElaSegment(currentWeekSubject, seg.key, 'novel_title', $event.target.value)" type="text" placeholder="e.g., Charlotte's Web" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Chapters / Pages Covered</label>
+                                            <input :value="seg.chapters_covered" @change="updateElaSegment(currentWeekSubject, seg.key, 'chapters_covered', $event.target.value)" type="text" placeholder="e.g., Ch. 5–8" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Reading Notes / Reflection</label>
+                                            <textarea :value="seg.reading_notes" @change="updateElaSegment(currentWeekSubject, seg.key, 'reading_notes', $event.target.value)" rows="2" placeholder="Reflection, vocabulary, discussion points..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div v-else-if="seg.key === 'writing'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program</label>
+                                            <input :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., Brave Writer" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Unit &amp; Lesson</label>
+                                            <input :value="seg.unit_lesson" @change="updateElaSegment(currentWeekSubject, seg.key, 'unit_lesson', $event.target.value)" type="text" placeholder="e.g., Unit 3, Lesson 2" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Style Focus / Checklist</label>
+                                            <textarea :value="seg.style_focus" @change="updateElaSegment(currentWeekSubject, seg.key, 'style_focus', $event.target.value)" rows="2" placeholder="What this unit is practicing..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div v-else-if="seg.key === 'grammar'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program</label>
+                                            <input :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., Easy Grammar" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Unit &amp; Lesson</label>
+                                            <input :value="seg.unit_lesson" @change="updateElaSegment(currentWeekSubject, seg.key, 'unit_lesson', $event.target.value)" type="text" placeholder="e.g., Unit 4, Lesson 1" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Grammar Notes / Checklist</label>
+                                            <textarea :value="seg.grammar_notes" @change="updateElaSegment(currentWeekSubject, seg.key, 'grammar_notes', $event.target.value)" rows="2" placeholder="Rules covered, mistakes to watch..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div v-else-if="seg.key === 'spelling'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program</label>
+                                            <input :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., All About Spelling" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Lesson &amp; Rule</label>
+                                            <input :value="seg.lesson_rule" @change="updateElaSegment(currentWeekSubject, seg.key, 'lesson_rule', $event.target.value)" type="text" placeholder="e.g., Lesson 12 — silent e" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Test Score</label>
+                                            <input :value="seg.test_score" @change="updateElaSegment(currentWeekSubject, seg.key, 'test_score', $event.target.value)" type="text" placeholder="e.g., 18/20" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                        </div>
+                                    </div>
+
+                                    <div v-for="(ef, efi) in seg.extra" :key="efi" class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100">
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program / Topic Name</label>
+                                            <input :value="ef.name" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'name', $event.target.value)" type="text" placeholder="Program name" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        </div>
+                                        <div class="flex items-end gap-2">
+                                            <div class="flex-1">
+                                                <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Chapter / Unit</label>
+                                                <input :value="ef.detail" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'detail', $event.target.value)" type="text" placeholder="e.g., Unit 2" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            </div>
+                                            <button @click="removeElaExtraField(currentWeekSubject, seg.key, efi)" class="text-red-400 hover:text-red-600 text-xs pb-2">✕</button>
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Notes</label>
+                                            <textarea :value="ef.notes" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'notes', $event.target.value)" rows="2" placeholder="Notes..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                    </div>
+                                    <button @click="addElaExtraField(currentWeekSubject, seg.key)" class="mt-2 bg-slate-500 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs">➕ Add Field</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weekly Activity Log: Math only, structured sub-form over existing scalar columns -->
+                        <div v-if="subjectKind(currentWeekSubject) === 'math'" class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'weekly_log')">
+                                <p class="text-xs font-semibold text-indigo-700">📝 WEEKLY ACTIVITY LOG</p>
+                                <span class="text-xs text-indigo-600">{{ isSectionOpen(currentWeekSubject.id, 'weekly_log') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'weekly_log')" class="mt-2 space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-indigo-700 mb-1">⏱ Total Time Spent (hours)</label>
+                                        <input :value="currentWeekSubject.time_spent_hours" @change="updateSubjectScalar(currentWeekSubject, 'time_spent_hours', $event.target.value === '' ? null : Number($event.target.value))" type="number" min="0" step="0.25" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-indigo-700 mb-1">⭐ Stars Earned</label>
+                                        <input :value="currentWeekSubject.stars_earned" @change="updateSubjectScalar(currentWeekSubject, 'stars_earned', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-indigo-700 mb-1">🏆 Trophies Earned</label>
+                                        <input :value="currentWeekSubject.trophies_earned" @change="updateSubjectScalar(currentWeekSubject, 'trophies_earned', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-indigo-700 mb-1">✅ Problems Answered Correctly</label>
+                                        <input :value="currentWeekSubject.correct_answers" @change="updateSubjectScalar(currentWeekSubject, 'correct_answers', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-indigo-700 mb-1">📚 Lessons / Topics Completed</label>
+                                    <textarea :value="currentWeekSubject.topic" @change="updateSubjectScalar(currentWeekSubject, 'topic', $event.target.value)" rows="4" placeholder="e.g., Unit 4 Lessons 1–3&#10;From the online module — paste the topics/lessons covered this week, one per line" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activities: Electives only — simple bold title + notes line per activity -->
+                        <div v-if="subjectKind(currentWeekSubject) === 'electives'" class="rounded-lg border border-pink-200 bg-pink-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'activities')">
+                                <p class="text-xs font-semibold text-pink-700">🎯 ACTIVITIES</p>
+                                <span class="text-xs text-pink-600">{{ isSectionOpen(currentWeekSubject.id, 'activities') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'activities')" class="mt-2 space-y-2">
+                                <div v-for="(entry, ei) in getActivityEntries(currentWeekSubject)" :key="ei" class="bg-white rounded border border-pink-200 p-2">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <input :value="entry.title" @change="updateActivityEntry(currentWeekSubject, ei, 'title', $event.target.value)" type="text" placeholder="e.g., Jiu Jitsu, Piano Lessons" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-bold" />
+                                        <button @click="removeActivityEntry(currentWeekSubject, ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    </div>
+                                    <input :value="entry.notes" @change="updateActivityEntry(currentWeekSubject, ei, 'notes', $event.target.value)" type="text" placeholder="e.g., 2x/week — Mon &amp; Thu" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                </div>
+                                <button @click="addActivityEntry(currentWeekSubject)" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1 rounded text-sm">➕ Add Activity</button>
+                            </div>
+                        </div>
+
+                        <!-- Enrichment Resources: Books / Videos / Websites -->
+                        <div v-if="sectionVisible(currentWeekSubject, 'enrichment')" class="rounded-lg border border-teal-200 bg-teal-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'enrichment_resources')">
+                                <p class="text-xs font-semibold text-teal-700">📚 ENRICHMENT RESOURCES (BOOKS, VIDEOS &amp; WEBSITES)</p>
+                                <span class="text-xs text-teal-600">{{ isSectionOpen(currentWeekSubject.id, 'enrichment_resources') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'enrichment_resources')" class="mt-2 space-y-2">
+                                <div v-for="(entry, ei) in getEntries(currentWeekSubject, 'enrichment_resources').entries" :key="ei" class="bg-white rounded border border-teal-200 p-2 flex items-center gap-2 flex-wrap">
+                                    <input type="checkbox" :checked="entry.done" @change="toggleEntryDone(currentWeekSubject, 'enrichment_resources', ei)" />
+                                    <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="resourceTypeBadgeClass(entry.type)">{{ resourceTypeLabel(entry.type) }}</span>
+                                    <input :value="entry.label" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'label', $event.target.value)" type="text" placeholder="Title" class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                    <input v-if="entry.type === 'episode'" :value="entry.date" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'date', $event.target.value)" type="date" class="px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <input :value="entry.link" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'link', $event.target.value)" type="text" placeholder="URL / link (optional)..." class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <a v-if="entry.link" :href="normalizedLink(entry.link)" target="_blank" rel="noopener" class="text-teal-600 hover:text-teal-800 text-sm" title="Open link">🔗</a>
+                                    <button @click="removeEntry(currentWeekSubject, 'enrichment_resources', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    <div v-if="entry.type === 'book'" class="w-full text-xs text-amber-600">Marking this as done adds it to the Book Log automatically.</div>
+                                </div>
+                                <div class="flex gap-2 flex-wrap">
+                                    <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'book' })" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Book</button>
+                                    <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'video' })" class="bg-rose-100 hover:bg-rose-200 text-rose-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Video</button>
+                                    <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'website' })" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Website</button>
+                                    <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'episode' })" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Episode</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hands-on Activities & Craft (simple, generic) -->
+                        <div v-if="sectionVisible(currentWeekSubject, 'hands_on')" class="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'hands_on_activities')">
+                                <p class="text-xs font-semibold text-orange-700">✋ HANDS-ON ACTIVITIES &amp; CRAFT</p>
+                                <span class="text-xs text-orange-600">{{ isSectionOpen(currentWeekSubject.id, 'hands_on_activities') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'hands_on_activities')" class="mt-2 space-y-2">
+                                <div v-for="(entry, ei) in getEntries(currentWeekSubject, 'hands_on_activities').entries" :key="ei" class="bg-white rounded border border-orange-200 p-2">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <input type="checkbox" :checked="entry.done" @change="toggleEntryDone(currentWeekSubject, 'hands_on_activities', ei)" />
+                                        <input :value="entry.label" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'label', $event.target.value)" type="text" placeholder="Activity name (e.g., Map Activity, Craft/Project...)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        <button @click="removeEntry(currentWeekSubject, 'hands_on_activities', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    </div>
+                                    <textarea :value="entry.content" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'content', $event.target.value)" rows="2" placeholder="Description / instructions..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-1"></textarea>
+                                    <input :value="entry.notes" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'notes', $event.target.value)" type="text" placeholder="Supplies needed (optional)..." class="w-full px-2 py-1 border border-gray-200 rounded text-xs text-gray-500" />
+                                </div>
+                                <button @click="addEntry(currentWeekSubject, 'hands_on_activities')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">➕ Add Activity</button>
+                            </div>
+                        </div>
+
+                        <!-- Labs: structured sub-form (Title, Objective, Materials, Procedure, Observations, Conclusion, Photo) -->
+                        <div v-if="sectionVisible(currentWeekSubject, 'labs')" class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'labs')">
+                                <p class="text-xs font-semibold text-cyan-700">🧪 LABS</p>
+                                <span class="text-xs text-cyan-600">{{ isSectionOpen(currentWeekSubject.id, 'labs') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'labs')" class="mt-2 space-y-3">
+                                <div v-for="(lab, li) in getLabs(currentWeekSubject)" :key="li" class="bg-white rounded border border-cyan-200 p-3">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <input type="checkbox" :checked="lab.done" @change="toggleLabDone(currentWeekSubject, li)" />
+                                        <input :value="lab.title" @change="updateLab(currentWeekSubject, li, 'title', $event.target.value)" type="text" placeholder="Lab title (e.g., Density Tower)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        <button @click="removeLab(currentWeekSubject, li)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs font-medium text-cyan-700 mb-0.5">Objective</label>
+                                            <textarea :value="lab.objective" @change="updateLab(currentWeekSubject, li, 'objective', $event.target.value)" rows="2" placeholder="What is this lab trying to show?" class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-cyan-700 mb-0.5">Materials Needed</label>
+                                            <textarea :value="lab.materials" @change="updateLab(currentWeekSubject, li, 'materials', $event.target.value)" rows="2" placeholder="List of materials..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-cyan-700 mb-0.5">Procedure</label>
+                                            <textarea :value="lab.procedure" @change="updateLab(currentWeekSubject, li, 'procedure', $event.target.value)" rows="2" placeholder="Steps followed..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-cyan-700 mb-0.5">Observations</label>
+                                            <textarea :value="lab.observations" @change="updateLab(currentWeekSubject, li, 'observations', $event.target.value)" rows="2" placeholder="What happened..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                    </div>
+                                    <label class="block text-xs font-medium text-cyan-700 mb-0.5 mt-2">Conclusion</label>
+                                    <textarea :value="lab.conclusion" @change="updateLab(currentWeekSubject, li, 'conclusion', $event.target.value)" rows="2" placeholder="What did we learn?" class="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-2"></textarea>
+                                    <label class="block text-xs font-medium text-cyan-700 mb-0.5">Lab Photo / Experiment Evidence (URL)</label>
+                                    <input :value="lab.photo_url" @change="updateLab(currentWeekSubject, li, 'photo_url', $event.target.value)" type="text" placeholder="Paste photo link..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <img v-if="lab.photo_url" :src="lab.photo_url" class="mt-2 max-h-32 rounded border border-cyan-200" />
+                                </div>
+                                <button @click="addLab(currentWeekSubject)" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-sm">➕ Add Lab</button>
+                            </div>
+                        </div>
+
+
+                        <!-- Notebook & Portfolio: tabbed categories (tabs vary by subject) -->
+                        <div v-if="sectionVisible(currentWeekSubject, 'notebook')" class="rounded-lg border border-violet-200 bg-violet-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'notebook_content')">
+                                <p class="text-xs font-semibold text-violet-700">📔 NOTEBOOK &amp; PORTFOLIO</p>
+                                <span class="text-xs text-violet-600">{{ isSectionOpen(currentWeekSubject.id, 'notebook_content') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'notebook_content')" class="mt-2">
+                                <div class="flex gap-2 flex-wrap mb-3">
+                                    <button v-for="tab in notebookTabsFor(currentWeekSubject)" :key="tab.key" @click="setNotebookTab(currentWeekSubject.id, tab.key)" :class="notebookTabClass(currentWeekSubject.id, tab.key)">{{ tab.icon }} {{ tab.label }}</button>
+                                </div>
+
+                                <div v-if="activeNotebookTab(currentWeekSubject.id) !== 'copywork'">
+                                    <div v-for="(item, ii) in getNotebook(currentWeekSubject)[activeNotebookTab(currentWeekSubject.id)]" :key="ii" class="bg-white rounded p-2 mb-2 border border-violet-200 flex items-start gap-2">
+                                        <div class="flex-1">
+                                            <textarea :value="item.text" @change="updateNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii, 'text', $event.target.value)" rows="2" placeholder="..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+
+                                            <template v-if="activeNotebookTab(currentWeekSubject.id) === 'questions'">
+                                                <button @click="toggleAnswerOpen(currentWeekSubject.id, ii)" class="text-xs text-violet-600 hover:text-violet-800 mt-1">{{ isAnswerOpen(currentWeekSubject.id, ii) ? '▲ Hide answer' : '▼ Answer' }}</button>
+                                                <textarea v-if="isAnswerOpen(currentWeekSubject.id, ii)" :value="item.answer" @change="updateNotebookItem(currentWeekSubject, 'questions', ii, 'answer', $event.target.value)" rows="2" placeholder="Answer / discussion notes..." class="w-full mt-1 px-2 py-1 border border-gray-200 rounded text-sm bg-violet-50"></textarea>
+                                            </template>
+                                        </div>
+                                        <button @click="removeNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    </div>
+                                    <button @click="addNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id))" class="bg-violet-500 hover:bg-violet-600 text-white px-3 py-1 rounded text-sm">➕ Add {{ activeNotebookTabLabel }}</button>
+                                </div>
+
+                                <div v-else>
+                                    <!-- History: copywork simplified to one field that grows with the text -->
+                                    <template v-if="subjectKind(currentWeekSubject) === 'history'">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Copywork</label>
+                                        <textarea :value="getNotebook(currentWeekSubject).copywork_text" @change="updateCopyworkText(currentWeekSubject, $event.target.value)" :rows="textareaRows(getNotebook(currentWeekSubject).copywork_text)" placeholder="Paste the copywork content here..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm resize-none"></textarea>
+                                    </template>
+
+                                    <template v-else>
+                                        <div v-for="(entry, ei) in getNotebook(currentWeekSubject).copywork" :key="ei" class="bg-white rounded p-2 mb-2 border border-violet-200">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <input :value="entry.label" @change="updateNotebookItem(currentWeekSubject, 'copywork', ei, 'label', $event.target.value)" type="text" placeholder="Label (e.g., Monday, Part 1...)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                                <label class="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
+                                                    <input type="checkbox" :checked="entry.copied" @change="toggleCopywork(currentWeekSubject, ei)" /> copied
+                                                </label>
+                                                <button @click="removeNotebookItem(currentWeekSubject, 'copywork', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                            </div>
+                                            <textarea :value="entry.content" @change="updateNotebookItem(currentWeekSubject, 'copywork', ei, 'content', $event.target.value)" rows="3" placeholder="Paste the teacher's guide text for this part here..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                        </div>
+                                        <button @click="addNotebookItem(currentWeekSubject, 'copywork')" class="bg-violet-500 hover:bg-violet-600 text-white px-3 py-1 rounded text-sm">➕ Add Copywork Entry</button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Study Memos (kept right after Notebook — these are for review) -->
+                        <div v-if="sectionVisible(currentWeekSubject, 'study_memos')" class="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'study_memos')">
+                                <p class="text-xs font-semibold text-amber-700">📋 STUDY MEMOS <span class="font-normal">Memo Book · Memo Slide · MemoCast</span></p>
+                                <span class="text-xs text-amber-600">{{ isSectionOpen(currentWeekSubject.id, 'study_memos') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'study_memos')" class="mt-2 space-y-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-amber-700 mb-1">📚 MEMO BOOK (PDF URL)</label>
+                                    <input :value="getStudyMemos(currentWeekSubject).memo_book_url" @change="updateStudyMemo(currentWeekSubject, 'memo_book_url', $event.target.value)" type="text" placeholder="Paste PDF link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-amber-700 mb-1">🖥️ MEMO SLIDE (PRESENTATION URL)</label>
+                                    <input :value="getStudyMemos(currentWeekSubject).memo_slide_url" @change="updateStudyMemo(currentWeekSubject, 'memo_slide_url', $event.target.value)" type="text" placeholder="Paste slides link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-amber-700 mb-1">🎧 MEMOCAST (AUDIO URL)</label>
+                                    <input :value="getStudyMemos(currentWeekSubject).memocast_url" @change="updateStudyMemo(currentWeekSubject, 'memocast_url', $event.target.value)" type="text" placeholder="Paste audio link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quizzes for this subject (not for Math) -->
+                        <div v-if="sectionVisible(currentWeekSubject, 'quizzes')" class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'quizzes')">
+                                <p class="text-xs font-semibold text-indigo-700">🧠 QUIZZES</p>
+                                <span class="text-xs text-indigo-600">{{ isSectionOpen(currentWeekSubject.id, 'quizzes') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'quizzes')" class="mt-2 space-y-3">
+                                <div v-if="quizzesForSubject(currentWeekSubject).length === 0" class="text-xs text-indigo-500">No quizzes yet for this subject.</div>
+                                <div v-for="quiz in quizzesForSubject(currentWeekSubject)" :key="quiz.id" class="bg-white rounded border border-indigo-200 p-2">
+                                    <div class="flex justify-between items-start flex-wrap gap-2">
+                                        <div>
+                                            <p class="font-semibold text-sm text-gray-800">{{ quiz.title }} <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">{{ quiz.quiz_type }}</span></p>
+                                            <p class="text-xs text-gray-500">{{ getQuestions(quiz.id).length }} question(s)</p>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button v-if="getQuestions(quiz.id).length > 0" @click="goTakeQuiz(currentWeekSubject, quiz)" class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs">▶️ Take Quiz</button>
+                                            <button @click="deleteQuiz(quiz.id)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                        </div>
+                                    </div>
+                                    <div v-if="getQuestions(quiz.id).length > 0" class="mt-2 space-y-1">
+                                        <div v-for="q in getQuestions(quiz.id)" :key="q.id" class="bg-gray-50 rounded p-1.5 flex justify-between items-start text-xs">
+                                            <span>{{ q.question_number }}. {{ q.question_text }}</span>
+                                            <button @click="deleteQuestion(quiz.id, q.id)" class="text-red-400 hover:text-red-600 ml-2">✕</button>
+                                        </div>
+                                    </div>
+                                    <form @submit.prevent="addQuestion(quiz)" class="mt-2 bg-gray-50 rounded-lg p-2 space-y-1.5">
+                                        <p class="text-xs font-semibold text-gray-500">ADD QUESTION</p>
+                                        <input v-model="newQuestion[quiz.id].question_text" type="text" placeholder="Question text" class="w-full px-2 py-1 border border-gray-300 rounded text-xs" required />
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                                            <input v-for="(opt, oi) in newQuestion[quiz.id].options" :key="oi" v-model="newQuestion[quiz.id].options[oi]" type="text" :placeholder="'Option ' + (oi + 1)" class="px-2 py-1 border border-gray-300 rounded text-xs" required />
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <label class="text-xs text-gray-600">Correct:</label>
+                                            <select v-model.number="newQuestion[quiz.id].correct_option_index" class="px-1 py-0.5 border border-gray-300 rounded text-xs">
+                                                <option v-for="(opt, oi) in newQuestion[quiz.id].options" :key="oi" :value="oi">Option {{ oi + 1 }}</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-xs">Add Question</button>
+                                    </form>
+                                </div>
+                                <form @submit.prevent="addQuizForSubject(currentWeekSubject)" class="flex gap-2 flex-wrap items-end">
+                                    <input v-model="newQuiz.title" type="text" placeholder="New quiz title (e.g., Fractions Check)" class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <select v-model="newQuiz.quiz_type" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                        <option value="retention">Retention</option>
+                                        <option value="practice">Practice</option>
+                                    </select>
+                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm">➕ Add Quiz</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Other / misc tasks (generic catch-all, de-emphasized) -->
+                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <p class="text-xs font-semibold text-gray-400 mb-2">OTHER / MISC</p>
+                            <div v-for="(task, tIndex) in getTasks(currentWeekSubject)" :key="tIndex" class="task-item flex items-center gap-2 mb-1">
+                                <input type="checkbox" :checked="task.done" @change="toggleTask(currentWeekSubject, tIndex)" />
+                                <span :class="task.done ? 'line-through text-gray-400' : 'text-gray-700'" class="text-sm">{{ task.text }}</span>
+                                <button @click="removeTask(currentWeekSubject, tIndex)" class="text-red-400 hover:text-red-600 text-xs ml-auto">✕</button>
+                            </div>
+                            <form @submit.prevent="addTask(currentWeekSubject)" class="flex gap-2 mt-2">
+                                <input v-model="newTaskText[currentWeekSubject.id]" type="text" placeholder="Add a miscellaneous task..." class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" />
+                                <button type="submit" class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm">Add</button>
+                            </form>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- QUIZZES -->
+            <div v-if="currentTab === 'quizzes'" class="bg-white rounded-b-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">🧠 Quizzes</h2>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <select v-model.number="selectedSubjectId" class="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg">
+                        <option v-for="s in subjectPickerOptions" :key="s.id" :value="s.id">{{ s.label }}</option>
+                    </select>
+                </div>
+
+                <div v-if="!selectedSubjectId" class="text-center py-12 bg-gray-50 rounded-lg text-gray-600">Add a subject first in the Subjects tab! ➡️</div>
+
+                <template v-else-if="!takingQuiz">
+                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-8 border-2 border-purple-200">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">➕ New Quiz</h3>
+                        <form @submit.prevent="addQuiz" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                                    <input v-model="newQuiz.title" type="text" placeholder="e.g., Fractions Check" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                    <select v-model="newQuiz.quiz_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        <option value="retention">Retention</option>
+                                        <option value="practice">Practice</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" :disabled="isLoading" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition">
+                                {{ isLoading ? '⏳ Creating...' : '✨ Create Quiz' }}
+                            </button>
+                        </form>
+                        <div v-if="error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ {{ error }}</div>
+                        <div v-if="successMessage" class="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">✅ {{ successMessage }}</div>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">📋 Quizzes for this Subject</h3>
+                    <div v-if="quizzesForSelectedSubject.length === 0" class="text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-600 text-lg">No quizzes yet</p></div>
+
+                    <div v-else class="space-y-4">
+                        <div v-for="quiz in quizzesForSelectedSubject" :key="quiz.id" class="bg-white p-4 rounded-lg border border-gray-200">
+                            <div class="flex justify-between items-start flex-wrap gap-2">
+                                <div>
+                                    <h4 class="font-bold text-gray-800">{{ quiz.title }} <span class="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700 ml-1">{{ quiz.quiz_type }}</span></h4>
+                                    <p class="text-sm text-gray-500">{{ getQuestions(quiz.id).length }} question(s)</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button v-if="getQuestions(quiz.id).length > 0" @click="startQuiz(quiz)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded transition text-sm">▶️ Take Quiz</button>
+                                    <button @click="deleteQuiz(quiz.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition">🗑️</button>
+                                </div>
+                            </div>
+
+                            <!-- Existing questions -->
+                            <div v-if="getQuestions(quiz.id).length > 0" class="mt-3 space-y-2">
+                                <div v-for="q in getQuestions(quiz.id)" :key="q.id" class="bg-gray-50 rounded p-2 flex justify-between items-start text-sm">
+                                    <span>{{ q.question_number }}. {{ q.question_text }}</span>
+                                    <button @click="deleteQuestion(quiz.id, q.id)" class="text-red-400 hover:text-red-600 ml-2">✕</button>
+                                </div>
+                            </div>
+
+                            <!-- Add question form -->
+                            <form @submit.prevent="addQuestion(quiz)" class="mt-4 bg-gray-50 rounded-lg p-4 space-y-2">
+                                <p class="text-xs font-semibold text-gray-500">ADD QUESTION</p>
+                                <input v-model="newQuestion[quiz.id].question_text" type="text" placeholder="Question text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" required />
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <input v-for="(opt, oi) in newQuestion[quiz.id].options" :key="oi" v-model="newQuestion[quiz.id].options[oi]" type="text" :placeholder="'Option ' + (oi + 1)" class="px-3 py-2 border border-gray-300 rounded text-sm" required />
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <label class="text-sm text-gray-600">Correct option:</label>
+                                    <select v-model.number="newQuestion[quiz.id].correct_option_index" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                        <option v-for="(opt, oi) in newQuestion[quiz.id].options" :key="oi" :value="oi">Option {{ oi + 1 }}</option>
+                                    </select>
+                                </div>
+                                <input v-model="newQuestion[quiz.id].explanation" type="text" placeholder="Explanation (optional)" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
+                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm">Add Question</button>
+                            </form>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Take Quiz flow -->
+                <template v-else>
+                    <div v-if="!quizResult">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">▶️ {{ takingQuiz.title }}</h3>
+                        <form @submit.prevent="finishQuiz" class="space-y-4">
+                            <div v-for="q in getQuestions(takingQuiz.id)" :key="q.id" class="bg-gray-50 rounded-lg p-4">
+                                <p class="font-semibold text-gray-800 mb-2">{{ q.question_number }}. {{ q.question_text }}</p>
+                                <div v-for="(opt, oi) in q.options" :key="oi" class="flex items-center gap-2 mb-1">
+                                    <input type="radio" :name="'q' + q.id" :value="oi" v-model.number="takeAnswers[q.id]" required />
+                                    <label>{{ opt }}</label>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">✅ Submit Quiz</button>
+                                <button type="button" @click="cancelQuiz" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div v-else class="text-center py-8">
+                        <p class="text-5xl mb-4">{{ quizResult.correct === quizResult.total ? '🎉' : '📝' }}</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">{{ quizResult.correct }} / {{ quizResult.total }} correct</h3>
+                        <p class="text-gray-600 mb-6">+{{ quizResult.coinsEarned }} coins earned</p>
+                        <button @click="cancelQuiz" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition">Done</button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- BOOKS -->
+            <div v-if="currentTab === 'books'" class="bg-white rounded-b-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">📖 Reading Tracker</h2>
+
+                <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-8 border-2 border-purple-200">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">➕ Add Book</h3>
+                    <form @submit.prevent="addBook" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                                <input v-model="newBook.title" type="text" placeholder="e.g., Charlotte's Web" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                                <input v-model="newBook.author" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Total Pages</label>
+                                <input v-model.number="newBook.total_pages" type="number" min="1" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                                <select v-model="newBook.source" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="curriculum">Curriculum</option>
+                                    <option value="free_reading">Free Reading</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Subject (optional)</label>
+                                <input v-model="newBook.subject_name" type="text" placeholder="e.g., ELA" class="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Week (optional)</label>
+                                <select v-model.number="newBook.week_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option :value="null">— none —</option>
+                                    <option v-for="week in weeks" :key="week.id" :value="week.id">Week {{ week.week_number }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" :disabled="isLoading" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition">
+                            {{ isLoading ? '⏳ Adding...' : '✨ Add Book' }}
+                        </button>
+                    </form>
+                    <div v-if="error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ {{ error }}</div>
+                    <div v-if="successMessage" class="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">✅ {{ successMessage }}</div>
+                </div>
+
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-lg font-bold text-gray-800">📋 All Books</h3>
+                    <select v-model="bookLogFilterSubject" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                        <option value="">All subjects</option>
+                        <option v-for="s in bookSubjectOptions" :key="s" :value="s">{{ s }}</option>
+                    </select>
+                </div>
+                <div v-if="visibleBooks.length === 0" class="text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-600 text-lg">No books logged yet</p></div>
+
+                <div v-else class="space-y-2">
+                    <div v-for="book in visibleBooks" :key="book.id" class="bg-white p-3 rounded-lg border border-gray-200">
+                        <div class="flex justify-between items-center gap-2 flex-wrap">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h4 class="font-bold text-gray-800">{{ book.title }}<span v-if="book.author" class="font-normal text-gray-500"> — {{ book.author }}</span></h4>
+                                <span v-if="book.subject_name" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{{ book.subject_name }}</span>
+                                <span v-else class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Free Reading</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-0.5">
+                                    <span v-for="n in 5" :key="n" @click="setBookRating(book, n)" class="cursor-pointer text-base" :class="(book.rating || 0) >= n ? 'text-yellow-400' : 'text-gray-300'">★</span>
+                                </div>
+                                <button @click="toggleBookDetails(book.id)" class="text-xs text-purple-600 hover:text-purple-800">{{ isBookDetailsOpen(book.id) ? '▲ Details' : '▼ Details' }}</button>
+                            </div>
+                        </div>
+
+                        <div v-if="isBookDetailsOpen(book.id)" class="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                            <div class="flex justify-between items-start flex-wrap gap-2">
+                                <p class="text-xs text-gray-500">{{ book.source === 'free_reading' ? 'Free Reading' : 'Curriculum' }}</p>
+                                <div class="flex items-center gap-2">
+                                    <select :value="book.reading_status" @change="setBookStatus(book, $event.target.value)" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                        <option value="wishlist">Wishlist</option>
+                                        <option value="reading">Reading</option>
+                                        <option value="read">Read</option>
+                                        <option value="completed">Completed</option>
+                                    </select>
+                                    <button @click="deleteBook(book.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition">🗑️</button>
+                                </div>
+                            </div>
+
+                            <div v-if="book.total_pages">
+                                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                    <span>{{ book.pages_read || 0 }} / {{ book.total_pages }} pages</span>
+                                    <span>{{ Math.round(((book.pages_read || 0) / book.total_pages) * 100) }}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-500 h-2 rounded-full" :style="{ width: Math.min(100, Math.round(((book.pages_read || 0) / book.total_pages) * 100)) + '%' }"></div>
+                                </div>
+                                <input type="range" min="0" :max="book.total_pages" :value="book.pages_read || 0" @change="updateBookPages(book, $event.target.value)" class="w-full mt-2" />
+                            </div>
+
+                            <textarea :value="book.notes" @change="updateBookNotes(book, $event.target.value)" rows="2" placeholder="Notes / review..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REVIEW -->
+            <div v-if="currentTab === 'review'" class="bg-white rounded-b-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">🔁 Spaced Review</h2>
+                <p class="text-sm text-gray-500 mb-6">Questions resurface here on a schedule: get one right and it comes back less often, get it wrong and it comes back tomorrow.</p>
+
+                <div v-if="reviewSessionItems.length === 0" class="text-center py-12 bg-gray-50 rounded-lg text-gray-600">
+                    🎉 Nothing due right now. Take some quizzes in the Quizzes tab — answered questions will cycle back here for review.
+                </div>
+
+                <div v-else class="space-y-4">
+                    <div v-for="item in reviewSessionItems" :key="item.question.id" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <p class="text-xs text-gray-500 mb-1">{{ item.subjectName }} · {{ item.quiz.title }} · last seen {{ intervalLabel(item.lastAttempt.review_interval) }}</p>
+                        <p class="font-semibold text-gray-800 mb-3">{{ item.question.question_text }}</p>
+
+                        <div v-if="!reviewResult[item.question.id]">
+                            <div v-for="(opt, oi) in item.question.options" :key="oi" class="flex items-center gap-2 mb-1">
+                                <input type="radio" :name="'review' + item.question.id" :value="oi" v-model.number="reviewAnswers[item.question.id]" />
+                                <label>{{ opt }}</label>
+                            </div>
+                            <button @click="submitReviewAnswer(item)" :disabled="reviewAnswers[item.question.id] === undefined" class="mt-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-bold py-2 px-4 rounded-lg transition text-sm">
+                                Submit
+                            </button>
+                        </div>
+                        <div v-else class="flex items-center gap-3">
+                            <span :class="reviewResult[item.question.id].correct ? 'text-green-600' : 'text-red-600'" class="font-bold">
+                                {{ reviewResult[item.question.id].correct ? '✅ Correct!' : '❌ Not quite' }}
+                            </span>
+                            <span class="text-sm text-gray-500">Next review: {{ intervalLabel(reviewResult[item.question.id].nextInterval) }}</span>
+                            <span v-if="item.question.explanation" class="text-sm text-gray-500">— {{ item.question.explanation }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-white border-t border-gray-200 mt-12 py-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-600 text-sm">
+                <p>MemoSphere v2.2 | Phase 2: Learning Management System</p>
+            </div>
+        </footer>
+        </template>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        const defaultColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+        const defaultEmojis = ['📚', '🔬', '📐', '📖', '🎨', '🎵', '🏃', '🌍'];
+        const subjectIconMap = {
+            'history': { emoji: '🏛️', color: '#3b82f6' },
+            'history california': { emoji: '🌉', color: '#f59e0b' },
+            'science': { emoji: '🔬', color: '#10b981' },
+            'ela': { emoji: '✏️', color: '#ef4444' },
+            'math': { emoji: '📐', color: '#8b5cf6' },
+            'electives': { emoji: '🎯', color: '#ec4899' }
+        };
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+            }
+            return hash;
+        }
+        function getSubjectVisual(subjectName) {
+            const key = (subjectName || '').trim().toLowerCase();
+            if (subjectIconMap[key]) return subjectIconMap[key];
+            const idx = hashString(key) % defaultEmojis.length;
+            return { emoji: defaultEmojis[idx], color: defaultColors[idx] };
+        }
+
+        const app = createApp({
+            data() {
+                return {
+                    session: null,
+                    authChecked: false,
+                    signupAllowed: false,
+                    authMode: 'login',
+                    authEmail: '',
+                    authPassword: '',
+                    authPassword2: '',
+                    authError: '',
+                    authLoading: false,
+                    currentTab: 'dashboard',
+                    isConnected: false,
+                    appConfig: null,
+                    weeks: [],
+                    subjects: [],
+                    selectedWeekId: null,
+                    selectedWeekSubjectId: null,
+                    addWeekFormOpen: false,
+                    showAddSubjectForm: false,
+                    newWeek: { week_number: 1, start_date: '', end_date: '', school_year: '2026-2027', notes: '' },
+                    newSubject: { subject_name: '', topic: '' },
+                    subjectTemplates: [],
+                    newTaskText: {},
+                    sectionOpen: {},
+                    notebookTab: {},
+                    answerOpen: {},
+                    bookLogFilterSubject: '',
+                    bookDetailsOpen: {},
+                    quizzes: [],
+                    quizQuestions: [],
+                    selectedSubjectId: null,
+                    newQuiz: { title: '', quiz_type: 'retention' },
+                    newQuestion: {},
+                    takingQuiz: null,
+                    takeAnswers: {},
+                    quizResult: null,
+                    books: [],
+                    newBook: { title: '', author: '', total_pages: null, source: 'curriculum', subject_name: '', week_id: null },
+                    quizAttempts: [],
+                    reviewAnswers: {},
+                    reviewResult: {},
+                    reviewSessionItems: [],
+                    isLoading: false,
+                    error: null,
+                    globalError: null,
+                    successMessage: null,
+                    academicCalendar: {
+                        schoolYear: '2026-2027',
+                        source: 'Sage Oak Charter Schools',
+                        firstDay: '2026-08-24',
+                        lastDay: '2027-06-04',
+                        keyDates: [
+                            { date: '2026-08-24', label: 'First Day of School' },
+                            { date: '2026-09-07', label: 'Labor Day' },
+                            { date: '2026-11-11', label: "Veteran's Day" },
+                            { date: '2026-11-23', endDate: '2026-11-30', label: 'Fall Break' },
+                            { date: '2026-11-26', endDate: '2026-11-27', label: 'Thanksgiving' },
+                            { date: '2026-12-21', endDate: '2027-01-05', label: 'Winter Recess' },
+                            { date: '2027-01-18', label: 'MLK Day' },
+                            { date: '2027-01-22', label: 'End of 1st Semester' },
+                            { date: '2027-02-12', label: 'Student Free Day' },
+                            { date: '2027-02-15', label: "President's Day" },
+                            { date: '2027-03-29', endDate: '2027-04-05', label: 'Spring Break' },
+                            { date: '2027-05-31', label: 'Memorial Day' },
+                            { date: '2027-06-04', label: 'Last Day of School' },
+                            { date: '2027-06-18', label: 'Juneteenth (observed)' }
+                        ],
+                        learningPeriods: [
+                            { number: 1, start: '2026-08-24', end: '2026-09-18' },
+                            { number: 2, start: '2026-09-21', end: '2026-10-16' },
+                            { number: 3, start: '2026-10-19', end: '2026-11-13' },
+                            { number: 4, start: '2026-11-16', end: '2026-12-11' },
+                            { number: 5, start: '2026-12-14', end: '2027-01-22' },
+                            { number: 6, start: '2027-01-25', end: '2027-02-19' },
+                            { number: 7, start: '2027-02-22', end: '2027-03-19' },
+                            { number: 8, start: '2027-03-22', end: '2027-04-16' },
+                            { number: 9, start: '2027-04-19', end: '2027-05-14' },
+                            { number: 10, start: '2027-05-17', end: '2027-06-04' }
+                        ],
+                        lpMeetings: [
+                            { lp: 1, date: '2026-09-23', time: '12:30 PM' },
+                            { lp: 2, date: '2026-10-21', time: '12:30 PM' },
+                            { lp: 3, date: '2026-11-18', time: '12:30 PM' },
+                            { lp: 4, date: '2026-12-16', time: '12:30 PM' }
+                        ]
+                    }
+                };
+            },
+            computed: {
+                visibleBooks() {
+                    let list = (this.books || []).filter(b => b.visible !== false);
+                    if (this.bookLogFilterSubject) list = list.filter(b => (b.subject_name || '') === this.bookLogFilterSubject);
+                    return list.slice().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+                },
+                bookSubjectOptions() {
+                    const set = new Set((this.books || []).map(b => b.subject_name).filter(Boolean));
+                    return Array.from(set).sort();
+                },
+                activeWeek() {
+                    return this.weeks.find(w => w.status === 'in_progress') || null;
+                },
+                activeWeekSubjects() {
+                    if (!this.activeWeek) return [];
+                    return this.subjects.filter(s => s.week_id === this.activeWeek.id);
+                },
+                activeWeekHours() {
+                    return this.activeWeekSubjects.reduce((sum, s) => sum + (Number(s.time_spent_hours) || 0), 0);
+                },
+                todayISO() {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                },
+                currentLearningPeriod() {
+                    const today = this.todayISO;
+                    return this.academicCalendar.learningPeriods.find(lp => today >= lp.start && today <= lp.end) || null;
+                },
+                upcomingKeyDates() {
+                    const today = this.todayISO;
+                    return this.academicCalendar.keyDates
+                        .map(d => ({ ...d, sortDate: d.endDate || d.date, isPast: (d.endDate || d.date) < today }))
+                        .sort((a, b) => a.date.localeCompare(b.date));
+                },
+                nextLpMeeting() {
+                    const today = this.todayISO;
+                    return this.academicCalendar.lpMeetings.find(m => m.date >= today) || null;
+                },
+                yearProgressStats() {
+                    const realWeeks = this.weeks.filter(w => w.week_number < 900);
+                    const total = realWeeks.length;
+                    const completed = realWeeks.filter(w => w.status === 'completed').length;
+                    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                    return { total, completed, pct };
+                },
+                weekProgressList() {
+                    return this.weeks
+                        .filter(w => w.week_number < 900)
+                        .slice()
+                        .sort((a, b) => a.week_number - b.week_number)
+                        .map(w => {
+                            const subs = this.subjects.filter(s => s.week_id === w.id);
+                            const completedSubs = subs.filter(s => s.status === 'completed').length;
+                            const pct = subs.length > 0 ? Math.round((completedSubs / subs.length) * 100) : 0;
+                            return { ...w, subjectsTotal: subs.length, subjectsCompleted: completedSubs, pct };
+                        });
+                },
+                selectedWeek() {
+                    return this.weeks.find(w => w.id === this.selectedWeekId) || null;
+                },
+                subjectsForSelectedWeek() {
+                    if (!this.selectedWeekId) return [];
+                    return this.subjects.filter(s => s.week_id === this.selectedWeekId);
+                },
+                currentWeekSubject() {
+                    const list = this.subjectsForSelectedWeek;
+                    if (list.length === 0) return null;
+                    return list.find(s => s.id === this.selectedWeekSubjectId) || list[0];
+                },
+                activeNotebookTabLabel() {
+                    if (!this.currentWeekSubject) return '';
+                    const key = this.activeNotebookTab(this.currentWeekSubject.id);
+                    const tab = this.notebookTabsFor(this.currentWeekSubject).find(t => t.key === key);
+                    return tab ? tab.label.replace(/^The /, '') : '';
+                },
+                subjectPickerOptions() {
+                    return this.subjects.map(s => {
+                        const week = this.weeks.find(w => w.id === s.week_id);
+                        const weekLabel = week ? `Week ${week.week_number}` : 'Unknown week';
+                        return { id: s.id, label: `${weekLabel} — ${s.subject_name}` };
+                    });
+                },
+                quizzesForSelectedSubject() {
+                    if (!this.selectedSubjectId) return [];
+                    return this.quizzes.filter(q => q.subject_id === this.selectedSubjectId);
+                },
+                dueReviews() {
+                    const now = Date.now();
+                    const byQuestion = {};
+                    for (const a of this.quizAttempts) {
+                        const existing = byQuestion[a.question_id];
+                        if (!existing || new Date(a.created_at) > new Date(existing.created_at)) {
+                            byQuestion[a.question_id] = a;
+                        }
+                    }
+                    const due = [];
+                    for (const questionId of Object.keys(byQuestion)) {
+                        const lastAttempt = byQuestion[questionId];
+                        const question = this.quizQuestions.find(q => q.id === Number(questionId));
+                        if (!question) continue;
+                        const dueAt = new Date(lastAttempt.created_at).getTime() + this.intervalDays(lastAttempt.review_interval) * 86400000;
+                        if (now < dueAt) continue;
+                        const quiz = this.quizzes.find(q => q.id === question.quiz_id);
+                        if (!quiz) continue;
+                        const subject = this.subjects.find(s => s.id === quiz.subject_id);
+                        due.push({ question, quiz, lastAttempt, subjectName: subject ? subject.subject_name : (quiz.subject_name || 'Subject') });
+                    }
+                    return due;
+                }
+            },
+            async mounted() {
+                console.log('🚀 MemoSphere Phase 2: Loading...');
+
+                // Auth gate: nothing below loads until there's a logged-in session.
+                this.session = await window.MemoSphereSupabase.authGetSession();
+                window.MemoSphereSupabase.authOnChange((session) => {
+                    const hadSession = !!this.session;
+                    this.session = session;
+                    if (session && !hadSession) {
+                        // just signed in — load the app data
+                        this.loadAppAfterAuth();
+                    }
+                    if (!session) {
+                        // signed out — clear in-memory data
+                        this.isConnected = false;
+                    }
+                });
+                if (!this.session) {
+                    this.signupAllowed = !(await window.MemoSphereSupabase.anyProfilesExist());
+                }
+                this.authChecked = true;
+
+                if (this.session) {
+                    await this.loadAppAfterAuth();
+                }
+            },
+            methods: {
+                async loadAppAfterAuth() {
+                  try {
+                    const testResult = await window.MemoSphereSupabase.testConnection();
+                    this.isConnected = testResult;
+
+                    if (testResult) {
+                        await Promise.all([this.loadAppConfig(), this.loadWeeks(), this.loadSubjects(), this.loadQuizzes(), this.loadQuizQuestions(), this.loadBooks(), this.loadQuizAttempts(), this.loadSubjectTemplates()]);
+                        if (this.activeWeek) {
+                            this.selectedWeekId = this.activeWeek.id;
+                        } else if (this.weeks.length > 0) {
+                            this.selectedWeekId = this.weeks[0].id;
+                        }
+                        if (this.subjects.length > 0) {
+                            this.selectedSubjectId = this.subjects[0].id;
+                        }
+                        this.quizzes.forEach(q => this.ensureNewQuestionSlot(q.id));
+                        this.computeReviewSession();
+                        const realWeeks = this.weeks.filter(w => w.week_number < 900);
+                        const nextNum = realWeeks.length > 0 ? Math.max(...realWeeks.map(w => w.week_number)) + 1 : 1;
+                        this.newWeek.week_number = nextNum;
+                        if (this.appConfig && this.appConfig.school_year) {
+                            this.newWeek.school_year = this.appConfig.school_year;
+                        }
+                    } else {
+                        this.globalError = 'Could not connect to Supabase. Check your credentials.';
+                    }
+                    console.log('✅ MemoSphere Phase 2: Ready');
+                  } catch (err) {
+                    console.error('❌ Error:', err);
+                    this.globalError = err.message || 'Connection failed';
+                  }
+                },
+                async signIn() {
+                    this.authError = '';
+                    if (!this.authEmail || !this.authPassword) {
+                        this.authError = 'Enter your email and password.';
+                        return;
+                    }
+                    this.authLoading = true;
+                    try {
+                        const { data, error } = await window.MemoSphereSupabase.authSignIn(this.authEmail, this.authPassword);
+                        if (error) {
+                            this.authError = error.message;
+                            return;
+                        }
+                        this.session = data.session;
+                        this.authPassword = '';
+                        await this.loadAppAfterAuth();
+                    } finally {
+                        this.authLoading = false;
+                    }
+                },
+                async signUp() {
+                    this.authError = '';
+                    if (!this.authEmail || !this.authPassword) {
+                        this.authError = 'Enter an email and password.';
+                        return;
+                    }
+                    if (this.authPassword.length < 6) {
+                        this.authError = 'Password must be at least 6 characters.';
+                        return;
+                    }
+                    if (this.authPassword !== this.authPassword2) {
+                        this.authError = 'Passwords do not match.';
+                        return;
+                    }
+                    this.authLoading = true;
+                    try {
+                        const { data, error } = await window.MemoSphereSupabase.authSignUp(this.authEmail, this.authPassword);
+                        if (error) {
+                            this.authError = error.message;
+                            return;
+                        }
+                        if (data.session) {
+                            this.session = data.session;
+                            this.authPassword = '';
+                            this.authPassword2 = '';
+                            await this.loadAppAfterAuth();
+                        } else {
+                            // email confirmation required before a session exists
+                            this.authError = 'Account created. Check your email to confirm it, then sign in.';
+                            this.authMode = 'login';
+                        }
+                        this.signupAllowed = false;
+                    } finally {
+                        this.authLoading = false;
+                    }
+                },
+                async signOut() {
+                    await window.MemoSphereSupabase.authSignOut();
+                    this.session = null;
+                    this.isConnected = false;
+                },
+                async loadAppConfig() {
+                    const data = await window.MemoSphereSupabase.getAllRows('app_config');
+                    this.appConfig = (data && data[0]) || null;
+                },
+                async loadWeeks() {
+                    const data = await window.MemoSphereSupabase.getAllRows('weeks');
+                    this.weeks = (data || []).sort((a, b) => a.week_number - b.week_number);
+                },
+                async loadSubjects() {
+                    const data = await window.MemoSphereSupabase.getAllRows('subjects');
+                    this.subjects = data || [];
+                },
+                async addWeek() {
+                    if (!this.newWeek.start_date || !this.newWeek.end_date) {
+                        this.error = 'Start and end date are required';
+                        return;
+                    }
+                    this.isLoading = true;
+                    this.error = null;
+                    try {
+                        const result = await window.MemoSphereSupabase.insertRow('weeks', {
+                            week_number: this.newWeek.week_number,
+                            start_date: this.newWeek.start_date,
+                            end_date: this.newWeek.end_date,
+                            school_year: this.newWeek.school_year || '2026-2027',
+                            status: 'not_started',
+                            notes: this.newWeek.notes || null
+                        });
+                        if (result && result[0]) {
+                            this.weeks.push(result[0]);
+                            this.weeks.sort((a, b) => a.week_number - b.week_number);
+                            this.successMessage = `✨ Week ${result[0].week_number} created!`;
+                            this.newWeek = { week_number: result[0].week_number + 1, start_date: '', end_date: '', school_year: result[0].school_year, notes: '' };
+                            setTimeout(() => this.successMessage = null, 3000);
+                        } else {
+                            this.error = 'Failed to create week';
+                        }
+                    } catch (err) {
+                        console.error('Error adding week:', err);
+                        this.error = err.message || 'Failed to create week';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async setWeekStatus(week, status) {
+                    try {
+                        await window.MemoSphereSupabase.updateRow('weeks', week.id, { status });
+                        week.status = status;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to update week status';
+                    }
+                },
+                async deleteWeek(id) {
+                    if (!confirm('Delete this week? Subjects linked to it must be removed first.')) return;
+                    try {
+                        const ok = await window.MemoSphereSupabase.deleteRow('weeks', id);
+                        if (!ok) throw new Error('Delete failed — this week may still have subjects attached.');
+                        this.weeks = this.weeks.filter(w => w.id !== id);
+                        if (this.selectedWeekId === id) this.selectedWeekId = this.weeks[0] ? this.weeks[0].id : null;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to delete week (it may still have subjects attached)';
+                    }
+                },
+                async addSubject() {
+                    if (!this.newSubject.subject_name.trim()) {
+                        this.error = 'Enter subject name';
+                        return;
+                    }
+                    if (!this.selectedWeekId) {
+                        this.error = 'Select a week first';
+                        return;
+                    }
+                    this.isLoading = true;
+                    this.error = null;
+                    try {
+                        const template = this.getTemplate(this.newSubject.subject_name);
+                        const result = await window.MemoSphereSupabase.insertRow('subjects', {
+                            week_id: this.selectedWeekId,
+                            subject_name: this.newSubject.subject_name,
+                            topic: this.newSubject.topic || null,
+                            status: 'not_started',
+                            tasks: { tasks: [] },
+                            core_curriculum: (template && template.core_curriculum) || { fields: [] },
+                            enrichment_resources: (template && template.enrichment_resources) || { entries: [] },
+                            hands_on_activities: (template && template.hands_on_activities) || { entries: [] },
+                            labs: (template && template.labs) || { entries: [] },
+                            notebook_content: (template && template.notebook_content) || {},
+                            study_memos: {},
+                            custom_cards: (template && template.custom_cards) || { entries: [] }
+                        });
+                        if (result && result[0]) {
+                            this.subjects.push(result[0]);
+                            this.selectedWeekSubjectId = result[0].id;
+                            this.successMessage = `✨ "${this.newSubject.subject_name}" added!`;
+                            this.newSubject = { subject_name: '', topic: '' };
+                            this.showAddSubjectForm = false;
+                            setTimeout(() => this.successMessage = null, 3000);
+                        } else {
+                            this.error = 'Failed to create subject';
+                        }
+                    } catch (err) {
+                        console.error('Error adding subject:', err);
+                        this.error = err.message || 'Failed to create subject';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async updateSubjectScalar(subject, column, value) {
+                    subject[column] = value;
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { [column]: value });
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save';
+                    }
+                },
+                async setSubjectStatus(subject, status) {
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { status });
+                        subject.status = status;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to update subject status';
+                    }
+                },
+                async deleteSubject(id) {
+                    if (!confirm('Delete this subject?')) return;
+                    try {
+                        await window.MemoSphereSupabase.deleteRow('subjects', id);
+                        this.subjects = this.subjects.filter(s => s.id !== id);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to delete subject';
+                    }
+                },
+                getTasks(subject) {
+                    return (subject.tasks && subject.tasks.tasks) || [];
+                },
+                async addTask(subject) {
+                    const text = (this.newTaskText[subject.id] || '').trim();
+                    if (!text) return;
+                    const tasks = this.getTasks(subject).slice();
+                    tasks.push({ text, done: false });
+                    const updatedTasks = { tasks };
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { tasks: updatedTasks });
+                        subject.tasks = updatedTasks;
+                        this.newTaskText[subject.id] = '';
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to add task';
+                    }
+                },
+                async toggleTask(subject, index) {
+                    const tasks = this.getTasks(subject).slice();
+                    tasks[index] = { ...tasks[index], done: !tasks[index].done };
+                    const updatedTasks = { tasks };
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { tasks: updatedTasks });
+                        subject.tasks = updatedTasks;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to update task';
+                    }
+                },
+                async removeTask(subject, index) {
+                    const tasks = this.getTasks(subject).slice();
+                    tasks.splice(index, 1);
+                    const updatedTasks = { tasks };
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { tasks: updatedTasks });
+                        subject.tasks = updatedTasks;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to remove task';
+                    }
+                },
+                // Sections default OPEN; collapsing is explicit (key set to false)
+                isSectionOpen(subjectId, field) {
+                    const key = subjectId + '_' + field;
+                    return this.sectionOpen[key] !== false;
+                },
+                toggleSectionOpen(subjectId, field) {
+                    const key = subjectId + '_' + field;
+                    this.sectionOpen[key] = !this.isSectionOpen(subjectId, field);
+                },
+                weekPillClass(week) {
+                    const base = 'w-11 h-11 flex items-center justify-center rounded-lg text-sm font-bold transition';
+                    if (week.id === this.selectedWeekId) return base + ' bg-purple-600 text-white';
+                    return base + ' bg-gray-100 text-gray-700 hover:bg-gray-200';
+                },
+                subjectTabClass(subject, index) {
+                    const base = 'px-4 py-2 rounded-lg text-sm font-semibold transition';
+                    const isActive = this.currentWeekSubject && subject.id === this.currentWeekSubject.id;
+                    if (isActive) return base + ' bg-purple-600 text-white';
+                    return base + ' bg-gray-100 text-gray-700 hover:bg-gray-200';
+                },
+                resourceTypeLabel(type) {
+                    return { book: '📕 Book', video: '🎬 Video', website: '🌐 Website', episode: '📺 Episode' }[type] || '🔗 Resource';
+                },
+                resourceTypeBadgeClass(type) {
+                    return { book: 'bg-amber-100 text-amber-800', video: 'bg-rose-100 text-rose-800', website: 'bg-blue-100 text-blue-800', episode: 'bg-emerald-100 text-emerald-800' }[type] || 'bg-gray-100 text-gray-700';
+                },
+
+                // --- Generic {entries:[...]} jsonb sections: enrichment_resources, hands_on_activities, (legacy labs) ---
+                getEntries(subject, field) {
+                    const raw = subject[field];
+                    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { overview: '', entries: [] };
+                    const entries = (raw.entries || []).map(e => ({
+                        label: e.label || '',
+                        content: e.content || '',
+                        // backward-compatible with the earlier notebook-only "copied" flag
+                        done: e.done !== undefined ? !!e.done : !!e.copied,
+                        notes: e.notes || '',
+                        type: e.type || '',
+                        link: e.link || '',
+                        date: e.date || '',
+                        book_log_id: e.book_log_id || null
+                    }));
+                    return { overview: raw.overview || '', entries };
+                },
+                normalizedLink(url) {
+                    const u = (url || '').trim();
+                    if (!u) return '#';
+                    return /^https?:\/\//i.test(u) ? u : 'https://' + u;
+                },
+                parseTitleAuthor(raw) {
+                    const text = (raw || '').trim();
+                    // Accepts "Title, by Author" or just "Title by Author" (comma optional)
+                    const match = text.match(/^(.*?),?\s+by\s+(.+)$/i);
+                    if (!match) return { title: text, author: '' };
+                    return { title: match[1].trim(), author: match[2].trim() };
+                },
+                // Creates/hides/restores a Book Log row for a book marked done elsewhere in the app.
+                // Keeps the row (never deletes) so stars/notes/review survive unchecking.
+                async syncBookLog({ bookLogId, rawTitle, subjectName, visible }) {
+                    try {
+                        if (bookLogId) {
+                            await window.MemoSphereSupabase.updateRow('books', bookLogId, { visible });
+                            return bookLogId;
+                        }
+                        if (!visible) return null;
+                        const { title, author } = this.parseTitleAuthor(rawTitle);
+                        const rows = await window.MemoSphereSupabase.insertRow('books', {
+                            title: title || rawTitle || 'Untitled',
+                            author: author || null,
+                            subject_name: subjectName || null,
+                            reading_status: 'read',
+                            source: 'curriculum',
+                            visible: true
+                        });
+                        return (rows && rows[0] && rows[0].id) || null;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to sync book log';
+                        return bookLogId || null;
+                    }
+                },
+                async saveEntries(subject, field, data) {
+                    subject[field] = data;
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { [field]: data });
+                        if (field === 'enrichment_resources' || field === 'hands_on_activities') {
+                            this.syncFieldToTemplate(subject.subject_name, field, data);
+                        }
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save';
+                    }
+                },
+                addEntry(subject, field, overrides) {
+                    const d = this.getEntries(subject, field);
+                    const entries = d.entries.slice();
+                    entries.push({ label: '', content: '', done: false, notes: '', type: '', link: '', date: '', book_log_id: null, ...(overrides || {}) });
+                    this.saveEntries(subject, field, { overview: d.overview, entries });
+                },
+                updateEntry(subject, field, index, prop, value) {
+                    const d = this.getEntries(subject, field);
+                    const entries = d.entries.slice();
+                    entries[index] = { ...entries[index], [prop]: value };
+                    this.saveEntries(subject, field, { overview: d.overview, entries });
+                },
+                async toggleEntryDone(subject, field, index) {
+                    const d = this.getEntries(subject, field);
+                    const entries = d.entries.slice();
+                    let entry = { ...entries[index], done: !entries[index].done };
+                    entries[index] = entry;
+                    if (field === 'enrichment_resources' && entry.type === 'book') {
+                        entry.book_log_id = await this.syncBookLog({
+                            bookLogId: entry.book_log_id,
+                            rawTitle: entry.label,
+                            subjectName: subject.subject_name,
+                            visible: entry.done
+                        });
+                        entries[index] = entry;
+                    }
+                    this.saveEntries(subject, field, { overview: d.overview, entries });
+                },
+                removeEntry(subject, field, index) {
+                    const d = this.getEntries(subject, field);
+                    const entries = d.entries.slice();
+                    entries.splice(index, 1);
+                    this.saveEntries(subject, field, { overview: d.overview, entries });
+                },
+
+                // --- Core Curriculum: dynamic named fields, since every curriculum has different components ---
+                getCoreFields(subject) {
+                    const raw = subject.core_curriculum;
+                    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+                    return raw.fields || [];
+                },
+                async saveCoreFields(subject, fields) {
+                    const data = { fields };
+                    subject.core_curriculum = data;
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { core_curriculum: data });
+                        this.syncFieldToTemplate(subject.subject_name, 'core_curriculum', data);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save core curriculum';
+                    }
+                },
+                addCoreField(subject) {
+                    const fields = this.getCoreFields(subject).slice();
+                    fields.push({ label: '', value: '' });
+                    this.saveCoreFields(subject, fields);
+                },
+                updateCoreField(subject, index, prop, value) {
+                    const fields = this.getCoreFields(subject).slice();
+                    fields[index] = { ...fields[index], [prop]: value };
+                    this.saveCoreFields(subject, fields);
+                },
+                removeCoreField(subject, index) {
+                    const fields = this.getCoreFields(subject).slice();
+                    fields.splice(index, 1);
+                    this.saveCoreFields(subject, fields);
+                },
+
+                // --- Which subject-specific layout to use, and which generic sections apply ---
+                subjectKind(subject) {
+                    const name = (subject && subject.subject_name || '').toLowerCase();
+                    if (name.includes('elective')) return 'electives';
+                    if (name.includes('math')) return 'math';
+                    if (name.includes('biology') || name.includes('science')) return 'biology';
+                    if (name.includes('history')) return 'history';
+                    if (name.includes('ela') || name.includes('english') || name.includes('language arts')) return 'ela';
+                    return 'generic';
+                },
+                sectionVisible(subject, key) {
+                    const rules = {
+                        math:      { enrichment: false, study_memos: false, labs: false, hands_on: false, notebook: false, quizzes: false },
+                        electives: { enrichment: false, study_memos: false, labs: false, hands_on: false, notebook: false, quizzes: false },
+                        biology:   { enrichment: true,  study_memos: true,  labs: true,  hands_on: false, notebook: true,  quizzes: true },
+                        history:   { enrichment: true,  study_memos: true,  labs: false, hands_on: true,  notebook: true,  quizzes: true },
+                        ela:       { enrichment: true,  study_memos: true,  labs: false, hands_on: false, notebook: false, quizzes: true },
+                        generic:   { enrichment: true,  study_memos: true,  labs: true,  hands_on: true,  notebook: true,  quizzes: true }
+                    };
+                    const kind = this.subjectKind(subject);
+                    const rule = rules[kind] || rules.generic;
+                    return rule[key] !== false;
+                },
+
+                // --- ELA Core Curriculum: fixed segments (Literature / Writing / Grammar / Spelling), each extensible ---
+                elaSegmentDefaults() {
+                    return [
+                        { key: 'literature', title: '📖 Literature', done: false, novel_title: '', chapters_covered: '', reading_notes: '', book_log_id: null, extra: [] },
+                        { key: 'writing', title: '✍️ Writing', done: false, program: '', unit_lesson: '', style_focus: '', extra: [] },
+                        { key: 'grammar', title: '🔤 Grammar and Mechanics', done: false, program: '', unit_lesson: '', grammar_notes: '', extra: [] },
+                        { key: 'spelling', title: '🔡 Spelling and Vocabulary', done: false, program: '', lesson_rule: '', test_score: '', extra: [] }
+                    ];
+                },
+                getElaSegments(subject) {
+                    const raw = subject.core_curriculum;
+                    const saved = (raw && typeof raw === 'object' && !Array.isArray(raw) && Array.isArray(raw.segments)) ? raw.segments : null;
+                    const defaults = this.elaSegmentDefaults();
+                    if (!saved) return defaults;
+                    return defaults.map(def => {
+                        const found = saved.find(s => s.key === def.key);
+                        return found ? { ...def, ...found, extra: found.extra || [] } : def;
+                    });
+                },
+                async saveElaSegments(subject, segments) {
+                    const data = { segments };
+                    subject.core_curriculum = data;
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { core_curriculum: data });
+                        this.syncFieldToTemplate(subject.subject_name, 'core_curriculum', data);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save core curriculum';
+                    }
+                },
+                async updateElaSegment(subject, key, prop, value) {
+                    const segments = this.getElaSegments(subject).map(s => s.key === key ? { ...s, [prop]: value } : s);
+                    this.saveElaSegments(subject, segments);
+                },
+                async toggleElaSegmentDone(subject, key) {
+                    const segments = this.getElaSegments(subject).slice();
+                    const idx = segments.findIndex(s => s.key === key);
+                    if (idx === -1) return;
+                    let seg = { ...segments[idx], done: !segments[idx].done };
+                    if (key === 'literature') {
+                        seg.book_log_id = await this.syncBookLog({
+                            bookLogId: seg.book_log_id,
+                            rawTitle: seg.novel_title,
+                            subjectName: subject.subject_name,
+                            visible: seg.done
+                        });
+                    }
+                    segments[idx] = seg;
+                    this.saveElaSegments(subject, segments);
+                },
+                addElaExtraField(subject, key) {
+                    const segments = this.getElaSegments(subject).map(s => s.key === key ? { ...s, extra: [...s.extra, { name: '', detail: '', notes: '' }] } : s);
+                    this.saveElaSegments(subject, segments);
+                },
+                updateElaExtraField(subject, key, index, prop, value) {
+                    const segments = this.getElaSegments(subject).map(s => {
+                        if (s.key !== key) return s;
+                        const extra = s.extra.slice();
+                        extra[index] = { ...extra[index], [prop]: value };
+                        return { ...s, extra };
+                    });
+                    this.saveElaSegments(subject, segments);
+                },
+                removeElaExtraField(subject, key, index) {
+                    const segments = this.getElaSegments(subject).map(s => {
+                        if (s.key !== key) return s;
+                        const extra = s.extra.slice();
+                        extra.splice(index, 1);
+                        return { ...s, extra };
+                    });
+                    this.saveElaSegments(subject, segments);
+                },
+
+                // --- Study Memos: Memo Book / Memo Slide / MemoCast links ---
+                getStudyMemos(subject) {
+                    const raw = subject.study_memos;
+                    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { memo_book_url: '', memo_slide_url: '', memocast_url: '' };
+                    return { memo_book_url: raw.memo_book_url || '', memo_slide_url: raw.memo_slide_url || '', memocast_url: raw.memocast_url || '' };
+                },
+                async updateStudyMemo(subject, key, value) {
+                    const current = this.getStudyMemos(subject);
+                    const data = { ...current, [key]: value };
+                    subject.study_memos = data;
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { study_memos: data });
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save study memos';
+                    }
+                },
+
+                // --- Notebook & Portfolio: tabbed categories (tab set depends on subject) ---
+                notebookTabsFor(subject) {
+                    const kind = this.subjectKind(subject);
+                    if (kind === 'biology') {
+                        return [
+                            { key: 'big_ideas', icon: '💡', label: 'Big Ideas' },
+                            { key: 'small_stuff', icon: '🔎', label: 'Small Stuff' }
+                        ];
+                    }
+                    return [
+                        { key: 'big_ideas', icon: '💡', label: 'Big Ideas' },
+                        { key: 'details', icon: '🔍', label: 'The Details' },
+                        { key: 'questions', icon: '❓', label: 'Questions & Discussion' },
+                        { key: 'copywork', icon: '✍️', label: 'Copywork' }
+                    ];
+                },
+                setNotebookTab(subjectId, key) {
+                    this.notebookTab[subjectId] = key;
+                },
+                activeNotebookTab(subjectId) {
+                    return this.notebookTab[subjectId] || 'big_ideas';
+                },
+                notebookTabClass(subjectId, key) {
+                    const base = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition';
+                    if (this.activeNotebookTab(subjectId) === key) return base + ' bg-violet-600 text-white';
+                    return base + ' bg-white text-violet-700 border border-violet-200 hover:bg-violet-100';
+                },
+                getNotebook(subject) {
+                    const raw = subject.notebook_content;
+                    const safe = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+                    // backward-compatible: migrate the earlier flat `entries` list into Copywork
+                    const legacyCopywork = (safe.entries || []).map(e => ({ label: e.label || '', content: e.content || '', copied: !!e.copied }));
+                    return {
+                        overview: safe.overview || '',
+                        big_ideas: (safe.big_ideas || []).map(i => ({ text: i.text || '' })),
+                        details: (safe.details || []).map(i => ({ text: i.text || '' })),
+                        questions: (safe.questions || []).map(i => ({ text: i.text || '', answer: i.answer || '' })),
+                        small_stuff: (safe.small_stuff || []).map(i => ({ text: i.text || '' })),
+                        lab_photos: (safe.lab_photos || []).map(i => ({ text: i.text || '', photo_url: i.photo_url || '' })),
+                        copywork: (safe.copywork || legacyCopywork || []).map(e => ({ label: e.label || '', content: e.content || '', copied: !!e.copied })),
+                        copywork_text: safe.copywork_text || ''
+                    };
+                },
+                isAnswerOpen(subjectId, index) {
+                    return !!this.answerOpen[subjectId + '_' + index];
+                },
+                toggleAnswerOpen(subjectId, index) {
+                    const key = subjectId + '_' + index;
+                    this.answerOpen[key] = !this.answerOpen[key];
+                },
+                updateCopyworkText(subject, value) {
+                    const nb = this.getNotebook(subject);
+                    this.saveNotebook(subject, { ...nb, copywork_text: value });
+                },
+                textareaRows(text) {
+                    const t = text || '';
+                    const lines = t.split('\n').length;
+                    const wrapped = Math.ceil(t.length / 70);
+                    return Math.max(4, lines, wrapped);
+                },
+                async saveNotebook(subject, data) {
+                    subject.notebook_content = data;
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { notebook_content: data });
+                        this.syncFieldToTemplate(subject.subject_name, 'notebook_content', data);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save notebook';
+                    }
+                },
+                updateNotebookOverview(subject, value) {
+                    const nb = this.getNotebook(subject);
+                    this.saveNotebook(subject, { ...nb, overview: value });
+                },
+                addNotebookItem(subject, category) {
+                    const nb = this.getNotebook(subject);
+                    const list = nb[category].slice();
+                    if (category === 'copywork') list.push({ label: '', content: '', copied: false });
+                    else if (category === 'lab_photos') list.push({ text: '', photo_url: '' });
+                    else list.push({ text: '' });
+                    this.saveNotebook(subject, { ...nb, [category]: list });
+                },
+                updateNotebookItem(subject, category, index, prop, value) {
+                    const nb = this.getNotebook(subject);
+                    const list = nb[category].slice();
+                    list[index] = { ...list[index], [prop]: value };
+                    this.saveNotebook(subject, { ...nb, [category]: list });
+                },
+                removeNotebookItem(subject, category, index) {
+                    const nb = this.getNotebook(subject);
+                    const list = nb[category].slice();
+                    list.splice(index, 1);
+                    this.saveNotebook(subject, { ...nb, [category]: list });
+                },
+                toggleCopywork(subject, index) {
+                    const nb = this.getNotebook(subject);
+                    const list = nb.copywork.slice();
+                    list[index] = { ...list[index], copied: !list[index].copied };
+                    this.saveNotebook(subject, { ...nb, copywork: list });
+                },
+
+                // --- Labs: structured sub-form (Title, Objective, Materials, Procedure, Observations, Conclusion, Photo) ---
+                getLabs(subject) {
+                    const raw = subject.labs;
+                    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+                    return (raw.entries || []).map(l => ({
+                        title: l.title || '', objective: l.objective || '', materials: l.materials || '',
+                        procedure: l.procedure || '', observations: l.observations || '', conclusion: l.conclusion || '',
+                        photo_url: l.photo_url || '', done: !!l.done
+                    }));
+                },
+                async saveLabs(subject, entries) {
+                    const data = { entries };
+                    subject.labs = data;
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { labs: data });
+                        this.syncFieldToTemplate(subject.subject_name, 'labs', data);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save labs';
+                    }
+                },
+                addLab(subject) {
+                    const labs = this.getLabs(subject).slice();
+                    labs.push({ title: '', objective: '', materials: '', procedure: '', observations: '', conclusion: '', photo_url: '', done: false });
+                    this.saveLabs(subject, labs);
+                },
+                updateLab(subject, index, prop, value) {
+                    const labs = this.getLabs(subject).slice();
+                    labs[index] = { ...labs[index], [prop]: value };
+                    this.saveLabs(subject, labs);
+                },
+                toggleLabDone(subject, index) {
+                    const labs = this.getLabs(subject).slice();
+                    labs[index] = { ...labs[index], done: !labs[index].done };
+                    this.saveLabs(subject, labs);
+                },
+                removeLab(subject, index) {
+                    const labs = this.getLabs(subject).slice();
+                    labs.splice(index, 1);
+                    this.saveLabs(subject, labs);
+                },
+
+                // --- Activities: Electives only — simple bold title + notes line per entry (e.g., Jiu Jitsu / 2x week) ---
+                getActivityEntries(subject) {
+                    const raw = subject.custom_cards;
+                    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+                    return (raw.entries || []).map(e => ({ title: e.title || '', notes: e.notes || '' }));
+                },
+                async saveActivityEntries(subject, entries) {
+                    const data = { entries };
+                    try {
+                        await window.MemoSphereSupabase.updateRow('subjects', subject.id, { custom_cards: data });
+                        subject.custom_cards = data;
+                        this.syncFieldToTemplate(subject.subject_name, 'custom_cards', data);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to save activities';
+                    }
+                },
+                addActivityEntry(subject) {
+                    const entries = this.getActivityEntries(subject).slice();
+                    entries.push({ title: '', notes: '' });
+                    this.saveActivityEntries(subject, entries);
+                },
+                updateActivityEntry(subject, index, field, value) {
+                    const entries = this.getActivityEntries(subject).slice();
+                    entries[index] = { ...entries[index], [field]: value };
+                    this.saveActivityEntries(subject, entries);
+                },
+                removeActivityEntry(subject, index) {
+                    const entries = this.getActivityEntries(subject).slice();
+                    entries.splice(index, 1);
+                    this.saveActivityEntries(subject, entries);
+                },
+                getSubjectColor(subject) { return getSubjectVisual(typeof subject === 'string' ? subject : subject.subject_name).color; },
+                getSubjectEmoji(subject) { return getSubjectVisual(typeof subject === 'string' ? subject : subject.subject_name).emoji; },
+                statusLabel(status) {
+                    return { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' }[status] || status;
+                },
+                statusBadgeClass(status) {
+                    const base = 'text-xs font-semibold px-2 py-1 rounded-full ml-2';
+                    if (status === 'completed') return base + ' bg-green-100 text-green-700';
+                    if (status === 'in_progress') return base + ' bg-blue-100 text-blue-700';
+                    return base + ' bg-gray-100 text-gray-600';
+                },
+                formatDateShort(dateStr) {
+                    if (!dateStr) return '';
+                    const [y, m, d] = dateStr.split('-').map(Number);
+                    const dt = new Date(y, m - 1, d);
+                    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                },
+                formatDateUS(dateStr) {
+                    if (!dateStr) return '';
+                    const [y, m, d] = dateStr.split('-').map(Number);
+                    return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}/${y}`;
+                },
+                formatDateRange(dateStr, endDateStr) {
+                    if (!endDateStr || endDateStr === dateStr) return this.formatDateShort(dateStr);
+                    return `${this.formatDateShort(dateStr)} – ${this.formatDateShort(endDateStr)}`;
+                },
+                daysUntil(dateStr) {
+                    const [y, m, d] = dateStr.split('-').map(Number);
+                    const target = new Date(y, m - 1, d);
+                    const now = new Date();
+                    const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    return Math.round((target - todayMid) / 86400000);
+                },
+                keyDateBadge(d) {
+                    const days = this.daysUntil(d.sortDate);
+                    if (days < 0) return 'Past';
+                    if (days === 0) return 'Today';
+                    return `in ${days}d`;
+                },
+                async loadQuizzes() {
+                    const data = await window.MemoSphereSupabase.getAllRows('quizzes');
+                    this.quizzes = data || [];
+                    this.quizzes.forEach(q => this.ensureNewQuestionSlot(q.id));
+                },
+                async loadQuizQuestions() {
+                    const data = await window.MemoSphereSupabase.getAllRows('quiz_questions');
+                    this.quizQuestions = (data || []).sort((a, b) => (a.question_number || 0) - (b.question_number || 0));
+                },
+                getQuestions(quizId) {
+                    return this.quizQuestions.filter(q => q.quiz_id === quizId);
+                },
+                ensureNewQuestionSlot(quizId) {
+                    if (!this.newQuestion[quizId]) {
+                        this.newQuestion[quizId] = { question_text: '', options: ['', '', '', ''], correct_option_index: 0, explanation: '' };
+                    }
+                },
+                quizzesForSubject(subject) {
+                    if (!subject) return [];
+                    return this.quizzes.filter(q => q.subject_id === subject.id);
+                },
+                goTakeQuiz(subject, quiz) {
+                    this.currentTab = 'quizzes';
+                    this.selectedSubjectId = subject.id;
+                    this.startQuiz(quiz);
+                },
+                async addQuizForSubject(subject) {
+                    if (!this.newQuiz.title.trim()) {
+                        this.error = 'Enter a quiz title';
+                        return;
+                    }
+                    this.isLoading = true;
+                    this.error = null;
+                    try {
+                        const result = await window.MemoSphereSupabase.insertRow('quizzes', {
+                            subject_id: subject.id,
+                            week_id: subject.week_id,
+                            title: this.newQuiz.title,
+                            quiz_type: this.newQuiz.quiz_type,
+                            subject_name: subject.subject_name
+                        });
+                        if (result && result[0]) {
+                            this.quizzes.push(result[0]);
+                            this.ensureNewQuestionSlot(result[0].id);
+                            this.successMessage = `✨ Quiz "${result[0].title}" created!`;
+                            this.newQuiz = { title: '', quiz_type: 'retention' };
+                            setTimeout(() => this.successMessage = null, 3000);
+                        } else {
+                            this.error = 'Failed to create quiz';
+                        }
+                    } catch (err) {
+                        console.error('Error adding quiz:', err);
+                        this.error = err.message || 'Failed to create quiz';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async addQuiz() {
+                    if (!this.newQuiz.title.trim()) {
+                        this.error = 'Enter a quiz title';
+                        return;
+                    }
+                    if (!this.selectedSubjectId) {
+                        this.error = 'Select a subject first';
+                        return;
+                    }
+                    const subject = this.subjects.find(s => s.id === this.selectedSubjectId);
+                    this.isLoading = true;
+                    this.error = null;
+                    try {
+                        const result = await window.MemoSphereSupabase.insertRow('quizzes', {
+                            subject_id: this.selectedSubjectId,
+                            week_id: subject ? subject.week_id : null,
+                            title: this.newQuiz.title,
+                            quiz_type: this.newQuiz.quiz_type,
+                            subject_name: subject ? subject.subject_name : null
+                        });
+                        if (result && result[0]) {
+                            this.quizzes.push(result[0]);
+                            this.ensureNewQuestionSlot(result[0].id);
+                            this.successMessage = `✨ Quiz "${result[0].title}" created!`;
+                            this.newQuiz = { title: '', quiz_type: 'retention' };
+                            setTimeout(() => this.successMessage = null, 3000);
+                        } else {
+                            this.error = 'Failed to create quiz';
+                        }
+                    } catch (err) {
+                        console.error('Error adding quiz:', err);
+                        this.error = err.message || 'Failed to create quiz';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async deleteQuiz(id) {
+                    if (!confirm('Delete this quiz and its questions?')) return;
+                    try {
+                        await window.MemoSphereSupabase.deleteWhere('quiz_attempts', 'quiz_id', id);
+                        const qIds = this.getQuestions(id).map(q => q.id);
+                        for (const qid of qIds) {
+                            await window.MemoSphereSupabase.deleteRow('quiz_questions', qid);
+                        }
+                        await window.MemoSphereSupabase.deleteRow('quizzes', id);
+                        this.quizzes = this.quizzes.filter(q => q.id !== id);
+                        this.quizQuestions = this.quizQuestions.filter(q => q.quiz_id !== id);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to delete quiz';
+                    }
+                },
+                async addQuestion(quiz) {
+                    this.ensureNewQuestionSlot(quiz.id);
+                    const nq = this.newQuestion[quiz.id];
+                    if (!nq.question_text.trim() || nq.options.some(o => !o.trim())) {
+                        this.error = 'Fill in the question and all 4 options';
+                        return;
+                    }
+                    try {
+                        const nextNumber = this.getQuestions(quiz.id).length + 1;
+                        const result = await window.MemoSphereSupabase.insertRow('quiz_questions', {
+                            quiz_id: quiz.id,
+                            question_text: nq.question_text,
+                            question_number: nextNumber,
+                            options: nq.options,
+                            correct_option_index: nq.correct_option_index,
+                            explanation: nq.explanation || null
+                        });
+                        if (result && result[0]) {
+                            this.quizQuestions.push(result[0]);
+                            this.newQuestion[quiz.id] = { question_text: '', options: ['', '', '', ''], correct_option_index: 0, explanation: '' };
+                        }
+                    } catch (err) {
+                        console.error('Error adding question:', err);
+                        this.error = err.message || 'Failed to add question';
+                    }
+                },
+                async deleteQuestion(quizId, questionId) {
+                    try {
+                        await window.MemoSphereSupabase.deleteWhere('quiz_attempts', 'question_id', questionId);
+                        await window.MemoSphereSupabase.deleteRow('quiz_questions', questionId);
+                        this.quizQuestions = this.quizQuestions.filter(q => q.id !== questionId);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to delete question';
+                    }
+                },
+                startQuiz(quiz) {
+                    this.takingQuiz = quiz;
+                    this.takeAnswers = {};
+                    this.quizResult = null;
+                },
+                cancelQuiz() {
+                    this.takingQuiz = null;
+                    this.takeAnswers = {};
+                    this.quizResult = null;
+                },
+                async finishQuiz() {
+                    const questions = this.getQuestions(this.takingQuiz.id);
+                    let correct = 0;
+                    try {
+                        for (const q of questions) {
+                            const given = this.takeAnswers[q.id];
+                            const isCorrect = given === q.correct_option_index;
+                            if (isCorrect) correct++;
+                            const attemptResult = await window.MemoSphereSupabase.insertRow('quiz_attempts', {
+                                quiz_id: this.takingQuiz.id,
+                                question_id: q.id,
+                                user_email: 'cgchen.usa@gmail.com',
+                                answer_given: given,
+                                is_correct: isCorrect,
+                                review_interval: isCorrect ? 'weekly' : 'daily',
+                                attempt_number: 1
+                            });
+                            if (attemptResult && attemptResult[0]) this.quizAttempts.push(attemptResult[0]);
+                        }
+
+                        const coinsEarned = correct * 10;
+                        const subject = this.subjects.find(s => s.id === this.selectedSubjectId);
+                        if (subject) {
+                            const newCorrect = (subject.correct_answers || 0) + correct;
+                            const newStars = (subject.stars_earned || 0) + (correct === questions.length ? 1 : 0);
+                            await window.MemoSphereSupabase.updateRow('subjects', subject.id, {
+                                correct_answers: newCorrect,
+                                stars_earned: newStars
+                            });
+                            subject.correct_answers = newCorrect;
+                            subject.stars_earned = newStars;
+                        }
+                        if (this.appConfig) {
+                            const newCoins = (this.appConfig.coins || 0) + coinsEarned;
+                            const newLevel = Math.floor(newCoins / 100);
+                            await window.MemoSphereSupabase.updateRow('app_config', this.appConfig.id, {
+                                coins: newCoins,
+                                dragon_level: newLevel
+                            });
+                            this.appConfig.coins = newCoins;
+                            this.appConfig.dragon_level = newLevel;
+                        }
+
+                        this.quizResult = { correct, total: questions.length, coinsEarned };
+                    } catch (err) {
+                        console.error('Error finishing quiz:', err);
+                        this.globalError = err.message || 'Failed to record quiz results';
+                    }
+                },
+                async loadBooks() {
+                    const data = await window.MemoSphereSupabase.getAllRows('books');
+                    this.books = data || [];
+                },
+                async loadSubjectTemplates() {
+                    const data = await window.MemoSphereSupabase.getAllRows('subject_templates');
+                    this.subjectTemplates = data || [];
+                },
+                getTemplate(subjectName) {
+                    const name = (subjectName || '').trim().toLowerCase();
+                    return this.subjectTemplates.find(t => (t.subject_name || '').trim().toLowerCase() === name) || null;
+                },
+                // Keeps the persistent per-subject resource template in sync whenever that resource
+                // field is edited on any week's subject, so the next week created picks up the latest content.
+                async syncFieldToTemplate(subjectName, field, data) {
+                    if (!subjectName) return;
+                    try {
+                        const result = await window.MemoSphereSupabase.upsertRow('subject_templates', 'subject_name', subjectName, {
+                            [field]: data,
+                            updated_at: new Date().toISOString()
+                        });
+                        if (result && result[0]) {
+                            const idx = this.subjectTemplates.findIndex(t => t.id === result[0].id);
+                            if (idx === -1) this.subjectTemplates.push(result[0]);
+                            else this.subjectTemplates[idx] = result[0];
+                        }
+                    } catch (err) {
+                        console.error('Failed to sync subject template:', err);
+                    }
+                },
+                // Creates one subject per known template for the selected week, skipping subject names
+                // already present in that week, pre-filled with each template's latest resource content.
+                async loadWeekFromTemplates() {
+                    if (!this.selectedWeekId) {
+                        this.error = 'Select a week first';
+                        return;
+                    }
+                    const existingNames = this.subjectsForSelectedWeek.map(s => (s.subject_name || '').trim().toLowerCase());
+                    const toCreate = this.subjectTemplates.filter(t => !existingNames.includes((t.subject_name || '').trim().toLowerCase()));
+                    if (toCreate.length === 0) {
+                        this.successMessage = 'This week already has all template subjects.';
+                        setTimeout(() => this.successMessage = null, 3000);
+                        return;
+                    }
+                    this.isLoading = true;
+                    try {
+                        for (const t of toCreate) {
+                            const result = await window.MemoSphereSupabase.insertRow('subjects', {
+                                week_id: this.selectedWeekId,
+                                subject_name: t.subject_name,
+                                topic: null,
+                                status: 'not_started',
+                                tasks: { tasks: [] },
+                                core_curriculum: t.core_curriculum || { fields: [] },
+                                enrichment_resources: t.enrichment_resources || { entries: [] },
+                                hands_on_activities: t.hands_on_activities || { entries: [] },
+                                labs: t.labs || { entries: [] },
+                                notebook_content: t.notebook_content || {},
+                                study_memos: {},
+                                custom_cards: t.custom_cards || { entries: [] }
+                            });
+                            if (result && result[0]) this.subjects.push(result[0]);
+                        }
+                        this.successMessage = `✨ ${toCreate.length} subject(s) loaded from templates!`;
+                        setTimeout(() => this.successMessage = null, 3000);
+                    } catch (err) {
+                        this.error = err.message || 'Failed to load subjects from templates';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async addBook() {
+                    if (!this.newBook.title.trim()) {
+                        this.error = 'Enter a book title';
+                        return;
+                    }
+                    this.isLoading = true;
+                    this.error = null;
+                    try {
+                        const result = await window.MemoSphereSupabase.insertRow('books', {
+                            title: this.newBook.title,
+                            author: this.newBook.author || null,
+                            total_pages: this.newBook.total_pages || null,
+                            source: this.newBook.source,
+                            subject_name: this.newBook.subject_name || null,
+                            week_id: this.newBook.week_id || null,
+                            reading_status: 'reading',
+                            pages_read: 0
+                        });
+                        if (result && result[0]) {
+                            this.books.unshift(result[0]);
+                            this.successMessage = `✨ "${result[0].title}" added!`;
+                            this.newBook = { title: '', author: '', total_pages: null, source: 'curriculum', subject_name: '', week_id: null };
+                            setTimeout(() => this.successMessage = null, 3000);
+                        } else {
+                            this.error = 'Failed to add book';
+                        }
+                    } catch (err) {
+                        console.error('Error adding book:', err);
+                        this.error = err.message || 'Failed to add book';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async setBookStatus(book, status) {
+                    try {
+                        await window.MemoSphereSupabase.updateRow('books', book.id, { reading_status: status });
+                        book.reading_status = status;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to update reading status';
+                    }
+                },
+                async updateBookPages(book, pages) {
+                    const pagesRead = Number(pages);
+                    try {
+                        const updates = { pages_read: pagesRead };
+                        if (book.total_pages && pagesRead >= book.total_pages) {
+                            updates.reading_status = 'completed';
+                        }
+                        await window.MemoSphereSupabase.updateRow('books', book.id, updates);
+                        book.pages_read = pagesRead;
+                        if (updates.reading_status) book.reading_status = updates.reading_status;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to update pages read';
+                    }
+                },
+                async setBookRating(book, rating) {
+                    try {
+                        await window.MemoSphereSupabase.updateRow('books', book.id, { rating });
+                        book.rating = rating;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to update rating';
+                    }
+                },
+                async deleteBook(id) {
+                    if (!confirm('Delete this book?')) return;
+                    try {
+                        await window.MemoSphereSupabase.deleteRow('books', id);
+                        this.books = this.books.filter(b => b.id !== id);
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to delete book';
+                    }
+                },
+                async updateBookNotes(book, notes) {
+                    try {
+                        await window.MemoSphereSupabase.updateRow('books', book.id, { notes });
+                        book.notes = notes;
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to update notes';
+                    }
+                },
+                toggleBookDetails(id) {
+                    this.bookDetailsOpen[id] = !this.bookDetailsOpen[id];
+                },
+                isBookDetailsOpen(id) {
+                    return !!this.bookDetailsOpen[id];
+                },
+                async loadQuizAttempts() {
+                    const data = await window.MemoSphereSupabase.getAllRows('quiz_attempts');
+                    this.quizAttempts = data || [];
+                },
+                computeReviewSession() {
+                    this.reviewSessionItems = this.dueReviews;
+                    this.reviewAnswers = {};
+                    this.reviewResult = {};
+                },
+                intervalDays(interval) {
+                    return { daily: 1, weekly: 7, biweekly: 14, monthly: 30 }[interval] || 7;
+                },
+                intervalLabel(interval) {
+                    return { daily: 'Daily', weekly: 'Weekly', biweekly: 'Biweekly', monthly: 'Monthly' }[interval] || interval;
+                },
+                nextInterval(current, correct) {
+                    const order = ['daily', 'weekly', 'biweekly', 'monthly'];
+                    if (!correct) return 'daily';
+                    const idx = order.indexOf(current);
+                    return order[Math.min(idx + 1, order.length - 1)] || 'weekly';
+                },
+                async submitReviewAnswer(item) {
+                    const given = this.reviewAnswers[item.question.id];
+                    if (given === undefined) return;
+                    const isCorrect = given === item.question.correct_option_index;
+                    const nextInt = this.nextInterval(item.lastAttempt.review_interval, isCorrect);
+                    try {
+                        const result = await window.MemoSphereSupabase.insertRow('quiz_attempts', {
+                            quiz_id: item.quiz.id,
+                            question_id: item.question.id,
+                            user_email: 'cgchen.usa@gmail.com',
+                            answer_given: given,
+                            is_correct: isCorrect,
+                            review_interval: nextInt,
+                            attempt_number: (item.lastAttempt.attempt_number || 1) + 1
+                        });
+                        if (result && result[0]) this.quizAttempts.push(result[0]);
+                        this.reviewResult[item.question.id] = { correct: isCorrect, nextInterval: nextInt };
+                        if (isCorrect) {
+                            const subject = this.subjects.find(s => s.id === item.quiz.subject_id);
+                            if (subject) {
+                                const newCorrect = (subject.correct_answers || 0) + 1;
+                                await window.MemoSphereSupabase.updateRow('subjects', subject.id, { correct_answers: newCorrect });
+                                subject.correct_answers = newCorrect;
+                            }
+                        }
+                    } catch (err) {
+                        this.globalError = err.message || 'Failed to record review answer';
+                    }
+                }
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
