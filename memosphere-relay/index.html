@@ -282,11 +282,12 @@
                             <p class="text-sm text-gray-500">🗓️ {{ formatDateUS(selectedWeek.start_date) }} – {{ formatDateUS(selectedWeek.end_date) }}</p>
                         </div>
                         <div class="flex items-center gap-2">
-                            <select :value="selectedWeek.status" @change="setWeekStatus(selectedWeek, $event.target.value)" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                            <select v-if="canEditContent" :value="selectedWeek.status" @change="setWeekStatus(selectedWeek, $event.target.value)" class="px-2 py-1 border border-gray-300 rounded text-sm">
                                 <option value="not_started">Not Started</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="completed">Completed</option>
                             </select>
+                            <span v-else class="text-xs uppercase tracking-wide bg-gray-100 text-gray-500 rounded px-2 py-1">{{ statusLabel(selectedWeek.status) }}</span>
                             <button v-if="canEditContent" @click="deleteWeek(selectedWeek.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition" title="Delete week">🗑️</button>
                         </div>
                     </div>
@@ -334,11 +335,12 @@
                                 <p v-if="currentWeekSubject.time_spent_hours" class="text-sm text-gray-500">{{ currentWeekSubject.time_spent_hours }}h planned</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <select :value="currentWeekSubject.status" @change="setSubjectStatus(currentWeekSubject, $event.target.value)" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                <select v-if="canEditContent" :value="currentWeekSubject.status" @change="setSubjectStatus(currentWeekSubject, $event.target.value)" class="px-2 py-1 border border-gray-300 rounded text-sm">
                                     <option value="not_started">Not Started</option>
                                     <option value="in_progress">In Progress</option>
                                     <option value="completed">Completed</option>
                                 </select>
+                                <span v-else class="text-xs uppercase tracking-wide bg-gray-100 text-gray-500 rounded px-2 py-1">{{ statusLabel(currentWeekSubject.status) }}</span>
                                 <button v-if="canEditContent && students.length > 1" @click="applySubjectToAllStudents(currentWeekSubject)" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded text-sm transition" title="Copy this subject's content to the other students">👪 Apply to all</button>
                                 <button v-if="canEditContent" @click="deleteSubject(currentWeekSubject.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition">🗑️</button>
                             </div>
@@ -359,12 +361,14 @@
                             <div v-if="isSectionOpen(currentWeekSubject.id, 'core_curriculum')" class="mt-2 space-y-2">
                                 <div v-for="(field, fi) in getCoreFields(currentWeekSubject)" :key="fi" class="bg-white rounded border border-slate-200 p-2">
                                     <div class="flex items-center gap-2 mb-1">
-                                        <input :value="field.label" @change="updateCoreField(currentWeekSubject, fi, 'label', $event.target.value)" type="text" placeholder="Field name (e.g., UEWH Reading)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-base font-bold text-slate-700" />
-                                        <button @click="removeCoreField(currentWeekSubject, fi)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                        <input v-if="canEditContent" :value="field.label" @change="updateCoreField(currentWeekSubject, fi, 'label', $event.target.value)" type="text" placeholder="Field name (e.g., UEWH Reading)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-base font-bold text-slate-700" />
+                                        <p v-else class="flex-1 text-base font-bold text-slate-700">{{ field.label }}</p>
+                                        <button v-if="canEditContent" @click="removeCoreField(currentWeekSubject, fi)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
                                     </div>
-                                    <textarea :value="field.value" @change="updateCoreField(currentWeekSubject, fi, 'value', $event.target.value)" rows="1" placeholder="Value / notes for this field..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                    <textarea v-if="canEditContent" :value="field.value" @change="updateCoreField(currentWeekSubject, fi, 'value', $event.target.value)" rows="1" placeholder="Value / notes for this field..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                    <p v-else class="text-sm text-slate-600 whitespace-pre-wrap">{{ field.value }}</p>
                                 </div>
-                                <button @click="addCoreField(currentWeekSubject)" class="bg-slate-500 hover:bg-slate-600 text-white px-3 py-1 rounded text-sm">➕ Add Field</button>
+                                <button v-if="canEditContent" @click="addCoreField(currentWeekSubject)" class="bg-slate-500 hover:bg-slate-600 text-white px-3 py-1 rounded text-sm">➕ Add Field</button>
                             </div>
                         </div>
 
@@ -384,81 +388,81 @@
                                     <div v-if="seg.key === 'literature'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                         <div>
                                             <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Novel / Book Title</label>
-                                            <input :value="seg.novel_title" @change="updateElaSegment(currentWeekSubject, seg.key, 'novel_title', $event.target.value)" type="text" placeholder="e.g., Charlotte's Web" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                            <input :readonly="!canEditContent" :value="seg.novel_title" @change="updateElaSegment(currentWeekSubject, seg.key, 'novel_title', $event.target.value)" type="text" placeholder="e.g., Charlotte's Web" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
                                         </div>
                                         <div>
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Chapters / Pages Covered</label>
-                                            <input :value="seg.chapters_covered" @change="updateElaSegment(currentWeekSubject, seg.key, 'chapters_covered', $event.target.value)" type="text" placeholder="e.g., Ch. 5–8" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            <input :readonly="!canEditContent" :value="seg.chapters_covered" @change="updateElaSegment(currentWeekSubject, seg.key, 'chapters_covered', $event.target.value)" type="text" placeholder="e.g., Ch. 5–8" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Reading Notes / Reflection</label>
-                                            <textarea :value="seg.reading_notes" @change="updateElaSegment(currentWeekSubject, seg.key, 'reading_notes', $event.target.value)" rows="2" placeholder="Reflection, vocabulary, discussion points..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="seg.reading_notes" @change="updateElaSegment(currentWeekSubject, seg.key, 'reading_notes', $event.target.value)" rows="2" placeholder="Reflection, vocabulary, discussion points..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                     </div>
 
                                     <div v-else-if="seg.key === 'writing'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                         <div>
                                             <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program</label>
-                                            <input :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., Brave Writer" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                            <input :readonly="!canEditContent" :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., Brave Writer" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
                                         </div>
                                         <div>
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Unit &amp; Lesson</label>
-                                            <input :value="seg.unit_lesson" @change="updateElaSegment(currentWeekSubject, seg.key, 'unit_lesson', $event.target.value)" type="text" placeholder="e.g., Unit 3, Lesson 2" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            <input :readonly="!canEditContent" :value="seg.unit_lesson" @change="updateElaSegment(currentWeekSubject, seg.key, 'unit_lesson', $event.target.value)" type="text" placeholder="e.g., Unit 3, Lesson 2" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Style Focus / Checklist</label>
-                                            <textarea :value="seg.style_focus" @change="updateElaSegment(currentWeekSubject, seg.key, 'style_focus', $event.target.value)" rows="2" placeholder="What this unit is practicing..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="seg.style_focus" @change="updateElaSegment(currentWeekSubject, seg.key, 'style_focus', $event.target.value)" rows="2" placeholder="What this unit is practicing..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                     </div>
 
                                     <div v-else-if="seg.key === 'grammar'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                         <div>
                                             <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program</label>
-                                            <input :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., Easy Grammar" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                            <input :readonly="!canEditContent" :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., Easy Grammar" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
                                         </div>
                                         <div>
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Unit &amp; Lesson</label>
-                                            <input :value="seg.unit_lesson" @change="updateElaSegment(currentWeekSubject, seg.key, 'unit_lesson', $event.target.value)" type="text" placeholder="e.g., Unit 4, Lesson 1" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            <input :readonly="!canEditContent" :value="seg.unit_lesson" @change="updateElaSegment(currentWeekSubject, seg.key, 'unit_lesson', $event.target.value)" type="text" placeholder="e.g., Unit 4, Lesson 1" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Grammar Notes / Checklist</label>
-                                            <textarea :value="seg.grammar_notes" @change="updateElaSegment(currentWeekSubject, seg.key, 'grammar_notes', $event.target.value)" rows="2" placeholder="Rules covered, mistakes to watch..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="seg.grammar_notes" @change="updateElaSegment(currentWeekSubject, seg.key, 'grammar_notes', $event.target.value)" rows="2" placeholder="Rules covered, mistakes to watch..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                     </div>
 
                                     <div v-else-if="seg.key === 'spelling'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                         <div>
                                             <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program</label>
-                                            <input :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., All About Spelling" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                            <input :readonly="!canEditContent" :value="seg.program" @change="updateElaSegment(currentWeekSubject, seg.key, 'program', $event.target.value)" type="text" placeholder="e.g., All About Spelling" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
                                         </div>
                                         <div>
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Lesson &amp; Rule</label>
-                                            <input :value="seg.lesson_rule" @change="updateElaSegment(currentWeekSubject, seg.key, 'lesson_rule', $event.target.value)" type="text" placeholder="e.g., Lesson 12 — silent e" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            <input :readonly="!canEditContent" :value="seg.lesson_rule" @change="updateElaSegment(currentWeekSubject, seg.key, 'lesson_rule', $event.target.value)" type="text" placeholder="e.g., Lesson 12 — silent e" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Test Score</label>
-                                            <input :value="seg.test_score" @change="updateElaSegment(currentWeekSubject, seg.key, 'test_score', $event.target.value)" type="text" placeholder="e.g., 18/20" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            <input :readonly="!canEditContent" :value="seg.test_score" @change="updateElaSegment(currentWeekSubject, seg.key, 'test_score', $event.target.value)" type="text" placeholder="e.g., 18/20" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                         </div>
                                     </div>
 
                                     <div v-for="(ef, efi) in seg.extra" :key="efi" class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100">
                                         <div>
                                             <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Program / Topic Name</label>
-                                            <input :value="ef.name" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'name', $event.target.value)" type="text" placeholder="Program name" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                            <input :readonly="!canEditContent" :value="ef.name" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'name', $event.target.value)" type="text" placeholder="Program name" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
                                         </div>
                                         <div class="flex items-end gap-2">
                                             <div class="flex-1">
                                                 <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Chapter / Unit</label>
-                                                <input :value="ef.detail" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'detail', $event.target.value)" type="text" placeholder="e.g., Unit 2" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                                <input :readonly="!canEditContent" :value="ef.detail" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'detail', $event.target.value)" type="text" placeholder="e.g., Unit 2" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                             </div>
-                                            <button @click="removeElaExtraField(currentWeekSubject, seg.key, efi)" class="text-red-400 hover:text-red-600 text-xs pb-2">✕</button>
+                                            <button v-if="canEditContent" @click="removeElaExtraField(currentWeekSubject, seg.key, efi)" class="text-red-400 hover:text-red-600 text-xs pb-2">✕</button>
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-[10px] font-medium text-slate-500 mb-0.5">Notes</label>
-                                            <textarea :value="ef.notes" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'notes', $event.target.value)" rows="2" placeholder="Notes..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="ef.notes" @change="updateElaExtraField(currentWeekSubject, seg.key, efi, 'notes', $event.target.value)" rows="2" placeholder="Notes..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                     </div>
-                                    <button @click="addElaExtraField(currentWeekSubject, seg.key)" class="mt-2 bg-slate-500 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs">➕ Add Field</button>
+                                    <button v-if="canEditContent" @click="addElaExtraField(currentWeekSubject, seg.key)" class="mt-2 bg-slate-500 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs">➕ Add Field</button>
                                 </div>
                             </div>
                         </div>
@@ -473,24 +477,24 @@
                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                                     <div>
                                         <label class="block text-xs font-medium text-indigo-700 mb-1">⏱ Total Time Spent (hours)</label>
-                                        <input :value="currentWeekSubject.time_spent_hours" @change="updateSubjectScalar(currentWeekSubject, 'time_spent_hours', $event.target.value === '' ? null : Number($event.target.value))" type="number" min="0" step="0.25" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                        <input :readonly="!canEditContent" :value="currentWeekSubject.time_spent_hours" @change="updateSubjectScalar(currentWeekSubject, 'time_spent_hours', $event.target.value === '' ? null : Number($event.target.value))" type="number" min="0" step="0.25" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-indigo-700 mb-1">⭐ Stars Earned</label>
-                                        <input :value="currentWeekSubject.stars_earned" @change="updateSubjectScalar(currentWeekSubject, 'stars_earned', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                        <input :readonly="!canEditContent" :value="currentWeekSubject.stars_earned" @change="updateSubjectScalar(currentWeekSubject, 'stars_earned', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-indigo-700 mb-1">🏆 Trophies Earned</label>
-                                        <input :value="currentWeekSubject.trophies_earned" @change="updateSubjectScalar(currentWeekSubject, 'trophies_earned', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                        <input :readonly="!canEditContent" :value="currentWeekSubject.trophies_earned" @change="updateSubjectScalar(currentWeekSubject, 'trophies_earned', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-indigo-700 mb-1">✅ Problems Answered Correctly</label>
-                                        <input :value="currentWeekSubject.correct_answers" @change="updateSubjectScalar(currentWeekSubject, 'correct_answers', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
+                                        <input :readonly="!canEditContent" :value="currentWeekSubject.correct_answers" @change="updateSubjectScalar(currentWeekSubject, 'correct_answers', $event.target.value === '' ? 0 : Number($event.target.value))" type="number" min="0" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm" />
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-indigo-700 mb-1">📚 Lessons / Topics Completed</label>
-                                    <textarea :value="currentWeekSubject.topic" @change="updateSubjectScalar(currentWeekSubject, 'topic', $event.target.value)" rows="4" placeholder="e.g., Unit 4 Lessons 1–3&#10;From the online module — paste the topics/lessons covered this week, one per line" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm"></textarea>
+                                    <textarea :readonly="!canEditContent" :value="currentWeekSubject.topic" @change="updateSubjectScalar(currentWeekSubject, 'topic', $event.target.value)" rows="4" placeholder="e.g., Unit 4 Lessons 1–3&#10;From the online module — paste the topics/lessons covered this week, one per line" class="w-full px-2 py-1 border border-indigo-300 rounded text-sm"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -504,12 +508,12 @@
                             <div v-if="isSectionOpen(currentWeekSubject.id, 'activities')" class="mt-2 space-y-2">
                                 <div v-for="(entry, ei) in getActivityEntries(currentWeekSubject)" :key="ei" class="bg-white rounded border border-pink-200 p-2">
                                     <div class="flex items-center gap-2 mb-1">
-                                        <input :value="entry.title" @change="updateActivityEntry(currentWeekSubject, ei, 'title', $event.target.value)" type="text" placeholder="e.g., Jiu Jitsu, Piano Lessons" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-bold" />
-                                        <button @click="removeActivityEntry(currentWeekSubject, ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                        <input :readonly="!canEditContent" :value="entry.title" @change="updateActivityEntry(currentWeekSubject, ei, 'title', $event.target.value)" type="text" placeholder="e.g., Jiu Jitsu, Piano Lessons" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-bold" />
+                                        <button v-if="canEditContent" @click="removeActivityEntry(currentWeekSubject, ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
                                     </div>
-                                    <input :value="entry.notes" @change="updateActivityEntry(currentWeekSubject, ei, 'notes', $event.target.value)" type="text" placeholder="e.g., 2x/week — Mon &amp; Thu" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <input :readonly="!canEditContent" :value="entry.notes" @change="updateActivityEntry(currentWeekSubject, ei, 'notes', $event.target.value)" type="text" placeholder="e.g., 2x/week — Mon &amp; Thu" class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                 </div>
-                                <button @click="addActivityEntry(currentWeekSubject)" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1 rounded text-sm">➕ Add Activity</button>
+                                <button v-if="canEditContent" @click="addActivityEntry(currentWeekSubject)" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1 rounded text-sm">➕ Add Activity</button>
                             </div>
                         </div>
 
@@ -523,14 +527,14 @@
                                 <div v-for="(entry, ei) in getEntries(currentWeekSubject, 'enrichment_resources').entries" :key="ei" class="bg-white rounded border border-teal-200 p-2 flex items-center gap-2 flex-wrap">
                                     <input type="checkbox" :checked="entry.done" @change="toggleEntryDone(currentWeekSubject, 'enrichment_resources', ei)" />
                                     <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="resourceTypeBadgeClass(entry.type)">{{ resourceTypeLabel(entry.type) }}</span>
-                                    <input :value="entry.label" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'label', $event.target.value)" type="text" placeholder="Title" class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
-                                    <input v-if="entry.type === 'episode'" :value="entry.date" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'date', $event.target.value)" type="date" class="px-2 py-1 border border-gray-300 rounded text-sm" />
-                                    <input :value="entry.link" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'link', $event.target.value)" type="text" placeholder="URL / link (optional)..." class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <input :readonly="!canEditContent" :value="entry.label" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'label', $event.target.value)" type="text" placeholder="Title" class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                    <input v-if="entry.type === 'episode'" :readonly="!canEditContent" :value="entry.date" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'date', $event.target.value)" type="date" class="px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <input :readonly="!canEditContent" :value="entry.link" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'link', $event.target.value)" type="text" placeholder="URL / link (optional)..." class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm" />
                                     <a v-if="entry.link" :href="normalizedLink(entry.link)" target="_blank" rel="noopener" class="text-teal-600 hover:text-teal-800 text-sm" title="Open link">🔗</a>
-                                    <button @click="removeEntry(currentWeekSubject, 'enrichment_resources', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    <button v-if="canEditContent" @click="removeEntry(currentWeekSubject, 'enrichment_resources', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
                                     <div v-if="entry.type === 'book'" class="w-full text-xs text-amber-600">Marking this as done adds it to the Book Log automatically.</div>
                                 </div>
-                                <div class="flex gap-2 flex-wrap">
+                                <div v-if="canEditContent" class="flex gap-2 flex-wrap">
                                     <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'book' })" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Book</button>
                                     <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'video' })" class="bg-rose-100 hover:bg-rose-200 text-rose-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Video</button>
                                     <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'website' })" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Website</button>
@@ -549,13 +553,13 @@
                                 <div v-for="(entry, ei) in getEntries(currentWeekSubject, 'hands_on_activities').entries" :key="ei" class="bg-white rounded border border-orange-200 p-2">
                                     <div class="flex items-center gap-2 mb-1">
                                         <input type="checkbox" :checked="entry.done" @change="toggleEntryDone(currentWeekSubject, 'hands_on_activities', ei)" />
-                                        <input :value="entry.label" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'label', $event.target.value)" type="text" placeholder="Activity name (e.g., Map Activity, Craft/Project...)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
-                                        <button @click="removeEntry(currentWeekSubject, 'hands_on_activities', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                        <input :readonly="!canEditContent" :value="entry.label" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'label', $event.target.value)" type="text" placeholder="Activity name (e.g., Map Activity, Craft/Project...)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        <button v-if="canEditContent" @click="removeEntry(currentWeekSubject, 'hands_on_activities', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
                                     </div>
-                                    <textarea :value="entry.content" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'content', $event.target.value)" rows="2" placeholder="Description / instructions..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-1"></textarea>
-                                    <input :value="entry.notes" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'notes', $event.target.value)" type="text" placeholder="Supplies needed (optional)..." class="w-full px-2 py-1 border border-gray-200 rounded text-xs text-gray-500" />
+                                    <textarea :readonly="!canEditContent" :value="entry.content" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'content', $event.target.value)" rows="2" placeholder="Description / instructions..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-1"></textarea>
+                                    <input :readonly="!canEditContent" :value="entry.notes" @change="updateEntry(currentWeekSubject, 'hands_on_activities', ei, 'notes', $event.target.value)" type="text" placeholder="Supplies needed (optional)..." class="w-full px-2 py-1 border border-gray-200 rounded text-xs text-gray-500" />
                                 </div>
-                                <button @click="addEntry(currentWeekSubject, 'hands_on_activities')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">➕ Add Activity</button>
+                                <button v-if="canEditContent" @click="addEntry(currentWeekSubject, 'hands_on_activities')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">➕ Add Activity</button>
                             </div>
                         </div>
 
@@ -569,34 +573,34 @@
                                 <div v-for="(lab, li) in getLabs(currentWeekSubject)" :key="li" class="bg-white rounded border border-cyan-200 p-3">
                                     <div class="flex items-center gap-2 mb-2">
                                         <input type="checkbox" :checked="lab.done" @change="toggleLabDone(currentWeekSubject, li)" />
-                                        <input :value="lab.title" @change="updateLab(currentWeekSubject, li, 'title', $event.target.value)" type="text" placeholder="Lab title (e.g., Density Tower)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
-                                        <button @click="removeLab(currentWeekSubject, li)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                        <input :readonly="!canEditContent" :value="lab.title" @change="updateLab(currentWeekSubject, li, 'title', $event.target.value)" type="text" placeholder="Lab title (e.g., Density Tower)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        <button v-if="canEditContent" @click="removeLab(currentWeekSubject, li)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                         <div>
                                             <label class="block text-xs font-medium text-cyan-700 mb-0.5">Objective</label>
-                                            <textarea :value="lab.objective" @change="updateLab(currentWeekSubject, li, 'objective', $event.target.value)" rows="2" placeholder="What is this lab trying to show?" class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="lab.objective" @change="updateLab(currentWeekSubject, li, 'objective', $event.target.value)" rows="2" placeholder="What is this lab trying to show?" class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                         <div>
                                             <label class="block text-xs font-medium text-cyan-700 mb-0.5">Materials Needed</label>
-                                            <textarea :value="lab.materials" @change="updateLab(currentWeekSubject, li, 'materials', $event.target.value)" rows="2" placeholder="List of materials..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="lab.materials" @change="updateLab(currentWeekSubject, li, 'materials', $event.target.value)" rows="2" placeholder="List of materials..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                         <div>
                                             <label class="block text-xs font-medium text-cyan-700 mb-0.5">Procedure</label>
-                                            <textarea :value="lab.procedure" @change="updateLab(currentWeekSubject, li, 'procedure', $event.target.value)" rows="2" placeholder="Steps followed..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="lab.procedure" @change="updateLab(currentWeekSubject, li, 'procedure', $event.target.value)" rows="2" placeholder="Steps followed..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                         <div>
                                             <label class="block text-xs font-medium text-cyan-700 mb-0.5">Observations</label>
-                                            <textarea :value="lab.observations" @change="updateLab(currentWeekSubject, li, 'observations', $event.target.value)" rows="2" placeholder="What happened..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="lab.observations" @change="updateLab(currentWeekSubject, li, 'observations', $event.target.value)" rows="2" placeholder="What happened..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
                                     </div>
                                     <label class="block text-xs font-medium text-cyan-700 mb-0.5 mt-2">Conclusion</label>
-                                    <textarea :value="lab.conclusion" @change="updateLab(currentWeekSubject, li, 'conclusion', $event.target.value)" rows="2" placeholder="What did we learn?" class="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-2"></textarea>
+                                    <textarea :readonly="!canEditContent" :value="lab.conclusion" @change="updateLab(currentWeekSubject, li, 'conclusion', $event.target.value)" rows="2" placeholder="What did we learn?" class="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-2"></textarea>
                                     <label class="block text-xs font-medium text-cyan-700 mb-0.5">Lab Photo / Experiment Evidence (URL)</label>
-                                    <input :value="lab.photo_url" @change="updateLab(currentWeekSubject, li, 'photo_url', $event.target.value)" type="text" placeholder="Paste photo link..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                                    <input :readonly="!canEditContent" :value="lab.photo_url" @change="updateLab(currentWeekSubject, li, 'photo_url', $event.target.value)" type="text" placeholder="Paste photo link..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                                     <img v-if="lab.photo_url" :src="lab.photo_url" class="mt-2 max-h-32 rounded border border-cyan-200" />
                                 </div>
-                                <button @click="addLab(currentWeekSubject)" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-sm">➕ Add Lab</button>
+                                <button v-if="canEditContent" @click="addLab(currentWeekSubject)" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-sm">➕ Add Lab</button>
                             </div>
                         </div>
 
@@ -615,37 +619,37 @@
                                 <div v-if="activeNotebookTab(currentWeekSubject.id) !== 'copywork'">
                                     <div v-for="(item, ii) in getNotebook(currentWeekSubject)[activeNotebookTab(currentWeekSubject.id)]" :key="ii" class="bg-white rounded p-2 mb-2 border border-violet-200 flex items-start gap-2">
                                         <div class="flex-1">
-                                            <textarea :value="item.text" @change="updateNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii, 'text', $event.target.value)" rows="2" placeholder="..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="item.text" @change="updateNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii, 'text', $event.target.value)" rows="2" placeholder="..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
 
                                             <template v-if="activeNotebookTab(currentWeekSubject.id) === 'questions'">
                                                 <button @click="toggleAnswerOpen(currentWeekSubject.id, ii)" class="text-xs text-violet-600 hover:text-violet-800 mt-1">{{ isAnswerOpen(currentWeekSubject.id, ii) ? '▲ Hide answer' : '▼ Answer' }}</button>
-                                                <textarea v-if="isAnswerOpen(currentWeekSubject.id, ii)" :value="item.answer" @change="updateNotebookItem(currentWeekSubject, 'questions', ii, 'answer', $event.target.value)" rows="2" placeholder="Answer / discussion notes..." class="w-full mt-1 px-2 py-1 border border-gray-200 rounded text-sm bg-violet-50"></textarea>
+                                                <textarea v-if="isAnswerOpen(currentWeekSubject.id, ii)" :readonly="!canEditContent" :value="item.answer" @change="updateNotebookItem(currentWeekSubject, 'questions', ii, 'answer', $event.target.value)" rows="2" placeholder="Answer / discussion notes..." class="w-full mt-1 px-2 py-1 border border-gray-200 rounded text-sm bg-violet-50"></textarea>
                                             </template>
                                         </div>
-                                        <button @click="removeNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                        <button v-if="canEditContent" @click="removeNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
                                     </div>
-                                    <button @click="addNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id))" class="bg-violet-500 hover:bg-violet-600 text-white px-3 py-1 rounded text-sm">➕ Add {{ activeNotebookTabLabel }}</button>
+                                    <button v-if="canEditContent" @click="addNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id))" class="bg-violet-500 hover:bg-violet-600 text-white px-3 py-1 rounded text-sm">➕ Add {{ activeNotebookTabLabel }}</button>
                                 </div>
 
                                 <div v-else>
                                     <!-- History: copywork simplified to one field that grows with the text -->
                                     <template v-if="subjectKind(currentWeekSubject) === 'history'">
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Copywork</label>
-                                        <textarea :value="getNotebook(currentWeekSubject).copywork_text" @change="updateCopyworkText(currentWeekSubject, $event.target.value)" :rows="textareaRows(getNotebook(currentWeekSubject).copywork_text)" placeholder="Paste the copywork content here..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm resize-none"></textarea>
+                                        <textarea :readonly="!canEditContent" :value="getNotebook(currentWeekSubject).copywork_text" @change="updateCopyworkText(currentWeekSubject, $event.target.value)" :rows="textareaRows(getNotebook(currentWeekSubject).copywork_text)" placeholder="Paste the copywork content here..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm resize-none"></textarea>
                                     </template>
 
                                     <template v-else>
                                         <div v-for="(entry, ei) in getNotebook(currentWeekSubject).copywork" :key="ei" class="bg-white rounded p-2 mb-2 border border-violet-200">
                                             <div class="flex items-center gap-2 mb-1">
-                                                <input :value="entry.label" @change="updateNotebookItem(currentWeekSubject, 'copywork', ei, 'label', $event.target.value)" type="text" placeholder="Label (e.g., Monday, Part 1...)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                                <input :readonly="!canEditContent" :value="entry.label" @change="updateNotebookItem(currentWeekSubject, 'copywork', ei, 'label', $event.target.value)" type="text" placeholder="Label (e.g., Monday, Part 1...)" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
                                                 <label class="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
                                                     <input type="checkbox" :checked="entry.copied" @change="toggleCopywork(currentWeekSubject, ei)" /> copied
                                                 </label>
-                                                <button @click="removeNotebookItem(currentWeekSubject, 'copywork', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                                <button v-if="canEditContent" @click="removeNotebookItem(currentWeekSubject, 'copywork', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
                                             </div>
-                                            <textarea :value="entry.content" @change="updateNotebookItem(currentWeekSubject, 'copywork', ei, 'content', $event.target.value)" rows="3" placeholder="Paste the teacher's guide text for this part here..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="entry.content" @change="updateNotebookItem(currentWeekSubject, 'copywork', ei, 'content', $event.target.value)" rows="3" placeholder="Paste the teacher's guide text for this part here..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
                                         </div>
-                                        <button @click="addNotebookItem(currentWeekSubject, 'copywork')" class="bg-violet-500 hover:bg-violet-600 text-white px-3 py-1 rounded text-sm">➕ Add Copywork Entry</button>
+                                        <button v-if="canEditContent" @click="addNotebookItem(currentWeekSubject, 'copywork')" class="bg-violet-500 hover:bg-violet-600 text-white px-3 py-1 rounded text-sm">➕ Add Copywork Entry</button>
                                     </template>
                                 </div>
                             </div>
@@ -660,15 +664,15 @@
                             <div v-if="isSectionOpen(currentWeekSubject.id, 'study_memos')" class="mt-2 space-y-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-amber-700 mb-1">📚 MEMO BOOK (PDF URL)</label>
-                                    <input :value="getStudyMemos(currentWeekSubject).memo_book_url" @change="updateStudyMemo(currentWeekSubject, 'memo_book_url', $event.target.value)" type="text" placeholder="Paste PDF link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
+                                    <input :readonly="!canEditContent" :value="getStudyMemos(currentWeekSubject).memo_book_url" @change="updateStudyMemo(currentWeekSubject, 'memo_book_url', $event.target.value)" type="text" placeholder="Paste PDF link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-amber-700 mb-1">🖥️ MEMO SLIDE (PRESENTATION URL)</label>
-                                    <input :value="getStudyMemos(currentWeekSubject).memo_slide_url" @change="updateStudyMemo(currentWeekSubject, 'memo_slide_url', $event.target.value)" type="text" placeholder="Paste slides link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
+                                    <input :readonly="!canEditContent" :value="getStudyMemos(currentWeekSubject).memo_slide_url" @change="updateStudyMemo(currentWeekSubject, 'memo_slide_url', $event.target.value)" type="text" placeholder="Paste slides link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-amber-700 mb-1">🎧 MEMOCAST (AUDIO URL)</label>
-                                    <input :value="getStudyMemos(currentWeekSubject).memocast_url" @change="updateStudyMemo(currentWeekSubject, 'memocast_url', $event.target.value)" type="text" placeholder="Paste audio link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
+                                    <input :readonly="!canEditContent" :value="getStudyMemos(currentWeekSubject).memocast_url" @change="updateStudyMemo(currentWeekSubject, 'memocast_url', $event.target.value)" type="text" placeholder="Paste audio link..." class="w-full px-2 py-1 border border-amber-300 rounded text-sm" />
                                 </div>
                             </div>
                         </div>
@@ -730,9 +734,9 @@
                             <div v-for="(task, tIndex) in getTasks(currentWeekSubject)" :key="tIndex" class="task-item flex items-center gap-2 mb-1">
                                 <input type="checkbox" :checked="task.done" @change="toggleTask(currentWeekSubject, tIndex)" />
                                 <span :class="task.done ? 'line-through text-gray-400' : 'text-gray-700'" class="text-sm">{{ task.text }}</span>
-                                <button @click="removeTask(currentWeekSubject, tIndex)" class="text-red-400 hover:text-red-600 text-xs ml-auto">✕</button>
+                                <button v-if="canEditContent" @click="removeTask(currentWeekSubject, tIndex)" class="text-red-400 hover:text-red-600 text-xs ml-auto">✕</button>
                             </div>
-                            <form @submit.prevent="addTask(currentWeekSubject)" class="flex gap-2 mt-2">
+                            <form v-if="canEditContent" @submit.prevent="addTask(currentWeekSubject)" class="flex gap-2 mt-2">
                                 <input v-model="newTaskText[currentWeekSubject.id]" type="text" placeholder="Add a miscellaneous task..." class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" />
                                 <button type="submit" class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm">Add</button>
                             </form>
