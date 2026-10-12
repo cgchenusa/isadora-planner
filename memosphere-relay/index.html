@@ -14,6 +14,23 @@
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <!-- Bootstrap Supabase connection config (anon key is safe to ship publicly — it's gated by RLS).
+         Seeds localStorage on first load so every browser/device works without manual console setup. -->
+    <script>
+        (function () {
+            try {
+                if (!localStorage.getItem('SUPABASE_URL')) {
+                    localStorage.setItem('SUPABASE_URL', 'https://tbsnommacbbzbdkyumzg.supabase.co');
+                }
+                if (!localStorage.getItem('SUPABASE_ANON_KEY')) {
+                    localStorage.setItem('SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRic25vbW1hY2JiemJka3l1bXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNDE3NjYsImV4cCI6MjEwNjkxNzc2Nn0.ZYsW7Kwg5pIu1erWrkmi0wKNWvHOWvLyUE_kOvrVGGs');
+                }
+            } catch (e) {
+                console.error('❌ Could not seed Supabase config into localStorage:', e);
+            }
+        })();
+    </script>
+
     <!-- MemoSphere Supabase Utilities -->
     <script src="utils/supabase.js"></script>
 
