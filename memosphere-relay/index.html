@@ -555,16 +555,19 @@
                                 <p class="text-xs font-semibold text-teal-700">📚 ENRICHMENT RESOURCES (BOOKS, VIDEOS &amp; WEBSITES)</p>
                                 <span class="text-xs text-teal-600">{{ isSectionOpen(currentWeekSubject.id, 'enrichment_resources') ? '▲' : '▼' }}</span>
                             </div>
-                            <div v-if="isSectionOpen(currentWeekSubject.id, 'enrichment_resources')" class="mt-2 space-y-2">
-                                <div v-for="(entry, ei) in getEntries(currentWeekSubject, 'enrichment_resources').entries" :key="ei" class="bg-white rounded border border-teal-200 p-2 flex items-center gap-2 flex-wrap">
-                                    <input type="checkbox" :checked="entry.done" @change="toggleEntryDone(currentWeekSubject, 'enrichment_resources', ei)" />
-                                    <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="resourceTypeBadgeClass(entry.type)">{{ resourceTypeLabel(entry.type) }}</span>
-                                    <input :readonly="!canEditContent" :value="entry.label" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'label', $event.target.value)" type="text" placeholder="Title" class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
-                                    <input v-if="entry.type === 'episode'" :readonly="!canEditContent" :value="entry.date" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'date', $event.target.value)" type="date" class="px-2 py-1 border border-gray-300 rounded text-sm" />
-                                    <input :readonly="!canEditContent" :value="entry.link" @change="updateEntry(currentWeekSubject, 'enrichment_resources', ei, 'link', $event.target.value)" type="text" placeholder="URL / link (optional)..." class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm" />
-                                    <a v-if="entry.link" :href="normalizedLink(entry.link)" target="_blank" rel="noopener" class="text-teal-600 hover:text-teal-800 text-sm" title="Open link">🔗</a>
-                                    <button v-if="canEditContent" @click="removeEntry(currentWeekSubject, 'enrichment_resources', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
-                                    <div v-if="entry.type === 'book'" class="w-full text-xs text-amber-600">Marking this as done adds it to the Book Log automatically.</div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'enrichment_resources')" class="mt-2 space-y-3">
+                                <div v-for="group in enrichmentGroups(currentWeekSubject)" :key="group.type" v-show="group.items.length > 0">
+                                    <p class="text-xs font-semibold text-teal-800 mb-1">{{ group.label }}</p>
+                                    <div class="space-y-2">
+                                        <div v-for="item in group.items" :key="item.i" class="bg-white rounded border border-teal-200 p-2 flex items-center gap-2 flex-wrap">
+                                            <input type="checkbox" :checked="item.entry.done" @change="toggleEntryDone(currentWeekSubject, 'enrichment_resources', item.i)" />
+                                            <input :readonly="!canEditContent" :value="item.entry.label" @change="updateEntry(currentWeekSubject, 'enrichment_resources', item.i, 'label', $event.target.value)" type="text" placeholder="Title" class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                            <input v-if="item.entry.type === 'episode'" :readonly="!canEditContent" :value="item.entry.date" @change="updateEntry(currentWeekSubject, 'enrichment_resources', item.i, 'date', $event.target.value)" type="date" class="px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            <input :readonly="!canEditContent" :value="item.entry.link" @change="updateEntry(currentWeekSubject, 'enrichment_resources', item.i, 'link', $event.target.value)" type="text" placeholder="URL / link (optional)..." class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm" />
+                                            <a v-if="item.entry.link" :href="normalizedLink(item.entry.link)" target="_blank" rel="noopener" class="text-teal-600 hover:text-teal-800 text-sm" title="Open link">🔗</a>
+                                            <button v-if="canEditContent" @click="removeEntry(currentWeekSubject, 'enrichment_resources', item.i)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div v-if="canEditContent" class="flex gap-2 flex-wrap">
                                     <button @click="addEntry(currentWeekSubject, 'enrichment_resources', { type: 'book' })" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded text-sm font-semibold">➕ Add Book</button>
@@ -651,7 +654,7 @@
                                 <div v-if="activeNotebookTab(currentWeekSubject.id) !== 'copywork'">
                                     <div v-for="(item, ii) in getNotebook(currentWeekSubject)[activeNotebookTab(currentWeekSubject.id)]" :key="ii" class="bg-white rounded p-2 mb-2 border border-violet-200 flex items-start gap-2">
                                         <div class="flex-1">
-                                            <textarea :readonly="!canEditContent" :value="item.text" @change="updateNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii, 'text', $event.target.value)" rows="2" placeholder="..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+                                            <textarea :readonly="!canEditContent" :value="item.text" @change="updateNotebookItem(currentWeekSubject, activeNotebookTab(currentWeekSubject.id), ii, 'text', $event.target.value)" rows="2" placeholder="..." class="w-full px-2 py-1 border border-gray-300 rounded text-sm" :class="{ 'font-bold': activeNotebookTab(currentWeekSubject.id) === 'questions' }"></textarea>
 
                                             <template v-if="activeNotebookTab(currentWeekSubject.id) === 'questions'">
                                                 <button @click="toggleAnswerOpen(currentWeekSubject.id, ii)" class="text-xs text-violet-600 hover:text-violet-800 mt-1">{{ isAnswerOpen(currentWeekSubject.id, ii) ? '▲ Hide answer' : '▼ Answer' }}</button>
@@ -1140,9 +1143,11 @@
             'history': { emoji: '🏛️', color: '#3b82f6' },
             'history california': { emoji: '🌉', color: '#f59e0b' },
             'science': { emoji: '🔬', color: '#10b981' },
+            'biology': { emoji: '🧬', color: '#10b981' },
             'ela': { emoji: '✏️', color: '#ef4444' },
             'math': { emoji: '📐', color: '#8b5cf6' },
-            'electives': { emoji: '🎯', color: '#ec4899' }
+            'electives': { emoji: '🎯', color: '#ec4899' },
+            'lp / tutor': { emoji: '🎓', color: '#06b6d4' }
         };
         function hashString(str) {
             let hash = 0;
@@ -1338,7 +1343,17 @@
                 },
                 subjectsForSelectedWeek() {
                     if (!this.selectedWeekId) return [];
-                    return this.scopedSubjects.filter(s => s.week_id === this.selectedWeekId);
+                    const list = this.scopedSubjects.filter(s => s.week_id === this.selectedWeekId);
+                    // Standard tab order regardless of the order subjects were created/fetched in,
+                    // so tabs don't shuffle week to week. Electives always last; anything unrecognized
+                    // (e.g. "LP / Tutor") sits after the core subjects but still before Electives.
+                    const kindOrder = { history: 0, math: 1, ela: 2, biology: 3 };
+                    const rank = (s) => {
+                        const kind = this.subjectKind(s);
+                        if (kind === 'electives') return 99;
+                        return kindOrder[kind] !== undefined ? kindOrder[kind] : 50;
+                    };
+                    return list.slice().sort((a, b) => rank(a) - rank(b));
                 },
                 currentWeekSubject() {
                     const list = this.subjectsForSelectedWeek;
@@ -1863,6 +1878,19 @@
                     return { book: 'bg-amber-100 text-amber-800', video: 'bg-rose-100 text-rose-800', website: 'bg-blue-100 text-blue-800', episode: 'bg-emerald-100 text-emerald-800' }[type] || 'bg-gray-100 text-gray-700';
                 },
 
+                // Enrichment Resources grouped by type (Books / Videos / Websites / Episodes),
+                // each item keeping its original index 'i' so edit/remove/toggle still target the right entry.
+                enrichmentGroups(subject) {
+                    const entries = this.getEntries(subject, 'enrichment_resources').entries;
+                    const withIndex = entries.map((entry, i) => ({ entry, i }));
+                    const byType = (type) => withIndex.filter(x => x.entry.type === type);
+                    return [
+                        { type: 'book', label: '📚 Books', items: byType('book') },
+                        { type: 'video', label: '🎬 Videos', items: byType('video') },
+                        { type: 'website', label: '🌐 Websites', items: byType('website') },
+                        { type: 'episode', label: '📺 Episodes', items: byType('episode') }
+                    ];
+                },
                 // --- Generic {entries:[...]} jsonb sections: enrichment_resources, hands_on_activities, (legacy labs) ---
                 getEntries(subject, field) {
                     const raw = subject[field];
