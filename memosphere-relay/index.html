@@ -672,6 +672,49 @@
                             </div>
                         </div>
 
+                        <!-- Vocabulary Flashcards: new-word drill (kept right before Study Memos/Quizzes — these are review tools) -->
+                        <div v-if="sectionVisible(currentWeekSubject, 'vocabulary')" class="rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3">
+                            <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'vocabulary_cards')">
+                                <p class="text-xs font-semibold text-fuchsia-700">🗂️ VOCABULARY FLASHCARDS</p>
+                                <span class="text-xs text-fuchsia-600">{{ isSectionOpen(currentWeekSubject.id, 'vocabulary_cards') ? '▲' : '▼' }}</span>
+                            </div>
+                            <div v-if="isSectionOpen(currentWeekSubject.id, 'vocabulary_cards')" class="mt-2 space-y-2">
+
+                                <!-- Review mode: one card at a time, click to flip -->
+                                <template v-if="flashcardState(currentWeekSubject.id).active && getEntries(currentWeekSubject, 'vocabulary_cards').entries.length > 0">
+                                    <div class="bg-white rounded-lg border-2 border-fuchsia-300 p-6 text-center cursor-pointer select-none min-h-[120px] flex items-center justify-center"
+                                         @click="flipFlashcard(currentWeekSubject.id)">
+                                        <div v-if="!flashcardState(currentWeekSubject.id).flipped">
+                                            <p class="text-lg font-bold text-gray-800">{{ currentFlashcardEntry(currentWeekSubject).label }}</p>
+                                            <p class="text-xs text-gray-400 mt-2">tap to reveal</p>
+                                        </div>
+                                        <div v-else>
+                                            <p class="text-base text-gray-800">{{ currentFlashcardEntry(currentWeekSubject).content }}</p>
+                                            <p v-if="currentFlashcardEntry(currentWeekSubject).notes" class="text-sm text-gray-500 italic mt-2">{{ currentFlashcardEntry(currentWeekSubject).notes }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <button @click="prevFlashcard(currentWeekSubject)" class="bg-fuchsia-100 hover:bg-fuchsia-200 text-fuchsia-700 px-3 py-1 rounded text-sm">← Prev</button>
+                                        <span class="text-xs text-gray-500">{{ flashcardState(currentWeekSubject.id).index + 1 }} / {{ getEntries(currentWeekSubject, 'vocabulary_cards').entries.length }}</span>
+                                        <button @click="nextFlashcard(currentWeekSubject)" class="bg-fuchsia-100 hover:bg-fuchsia-200 text-fuchsia-700 px-3 py-1 rounded text-sm">Next →</button>
+                                    </div>
+                                    <button @click="exitFlashcardReview(currentWeekSubject.id)" class="text-xs text-gray-400 hover:text-gray-600">✕ Close review</button>
+                                </template>
+
+                                <!-- Edit mode: word / definition / example list, plus Start Review -->
+                                <template v-else>
+                                    <button v-if="getEntries(currentWeekSubject, 'vocabulary_cards').entries.length > 0" @click="startFlashcardReview(currentWeekSubject.id)" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white px-3 py-1.5 rounded text-sm font-semibold mb-1">📖 Start Review ({{ getEntries(currentWeekSubject, 'vocabulary_cards').entries.length }} words)</button>
+                                    <div v-for="(entry, ei) in getEntries(currentWeekSubject, 'vocabulary_cards').entries" :key="ei" class="bg-white rounded border border-fuchsia-200 p-2 flex items-center gap-2 flex-wrap">
+                                        <input :readonly="!canEditContent" :value="entry.label" @change="updateEntry(currentWeekSubject, 'vocabulary_cards', ei, 'label', $event.target.value)" type="text" placeholder="Word" class="flex-1 min-w-[120px] px-2 py-1 border border-gray-300 rounded text-sm font-semibold" />
+                                        <input :readonly="!canEditContent" :value="entry.content" @change="updateEntry(currentWeekSubject, 'vocabulary_cards', ei, 'content', $event.target.value)" type="text" placeholder="Definition" class="flex-1 min-w-[160px] px-2 py-1 border border-gray-300 rounded text-sm" />
+                                        <input :readonly="!canEditContent" :value="entry.notes" @change="updateEntry(currentWeekSubject, 'vocabulary_cards', ei, 'notes', $event.target.value)" type="text" placeholder="Example sentence (optional)..." class="flex-1 min-w-[160px] px-2 py-1 border border-gray-200 rounded text-sm text-gray-500" />
+                                        <button v-if="canEditContent" @click="removeEntry(currentWeekSubject, 'vocabulary_cards', ei)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    </div>
+                                    <button v-if="canEditContent" @click="addEntry(currentWeekSubject, 'vocabulary_cards')" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white px-3 py-1 rounded text-sm">➕ Add Word</button>
+                                </template>
+                            </div>
+                        </div>
+
                         <!-- Study Memos (kept right after Notebook — these are for review) -->
                         <div v-if="sectionVisible(currentWeekSubject, 'study_memos')" class="rounded-lg border border-amber-300 bg-amber-50 p-3">
                             <div class="flex justify-between items-center cursor-pointer" @click="toggleSectionOpen(currentWeekSubject.id, 'study_memos')">
@@ -1132,6 +1175,7 @@
                     sectionOpen: {},
                     notebookTab: {},
                     answerOpen: {},
+                    flashcardReview: {},
                     bookLogFilterSubject: '',
                     bookDetailsOpen: {},
                     quizzes: [],
@@ -1535,6 +1579,9 @@
                                 enrichment_resources: {
                                     entries: ((subject.enrichment_resources && subject.enrichment_resources.entries) || []).map(e => ({ ...e, done: false }))
                                 },
+                                vocabulary_cards: {
+                                    entries: ((subject.vocabulary_cards && subject.vocabulary_cards.entries) || []).map(e => ({ ...e, done: false }))
+                                },
                                 hands_on_activities: subject.hands_on_activities || { entries: [] },
                                 labs: {
                                     entries: ((subject.labs && subject.labs.entries) || []).map(l => ({ ...l, observations: '', conclusion: '', photo_url: '', done: false }))
@@ -1647,6 +1694,7 @@
                             tasks: { tasks: [] },
                             core_curriculum: (template && template.core_curriculum) || { fields: [] },
                             enrichment_resources: (template && template.enrichment_resources) || { entries: [] },
+                            vocabulary_cards: (template && template.vocabulary_cards) || { entries: [] },
                             hands_on_activities: (template && template.hands_on_activities) || { entries: [] },
                             labs: (template && template.labs) || { entries: [] },
                             notebook_content: (template && template.notebook_content) || {},
@@ -1743,6 +1791,42 @@
                     const key = subjectId + '_' + field;
                     this.sectionOpen[key] = !this.isSectionOpen(subjectId, field);
                 },
+
+                // --- Vocabulary Flashcards: review mode (flip/next/prev) on top of the generic
+                // {entries:[{label, content, notes, done}]} field 'vocabulary_cards' ---
+                // label = word, content = definition, notes = example sentence (optional)
+                flashcardState(subjectId) {
+                    return this.flashcardReview[subjectId] || { active: false, index: 0, flipped: false };
+                },
+                startFlashcardReview(subjectId) {
+                    this.flashcardReview = { ...this.flashcardReview, [subjectId]: { active: true, index: 0, flipped: false } };
+                },
+                exitFlashcardReview(subjectId) {
+                    this.flashcardReview = { ...this.flashcardReview, [subjectId]: { active: false, index: 0, flipped: false } };
+                },
+                flipFlashcard(subjectId) {
+                    const s = this.flashcardState(subjectId);
+                    this.flashcardReview = { ...this.flashcardReview, [subjectId]: { ...s, flipped: !s.flipped } };
+                },
+                currentFlashcardEntry(subject) {
+                    const entries = this.getEntries(subject, 'vocabulary_cards').entries;
+                    if (entries.length === 0) return null;
+                    const s = this.flashcardState(subject.id);
+                    const idx = Math.min(s.index, entries.length - 1);
+                    return entries[idx];
+                },
+                nextFlashcard(subject) {
+                    const total = this.getEntries(subject, 'vocabulary_cards').entries.length;
+                    const s = this.flashcardState(subject.id);
+                    const index = total === 0 ? 0 : (s.index + 1) % total;
+                    this.flashcardReview = { ...this.flashcardReview, [subject.id]: { active: true, index, flipped: false } };
+                },
+                prevFlashcard(subject) {
+                    const total = this.getEntries(subject, 'vocabulary_cards').entries.length;
+                    const s = this.flashcardState(subject.id);
+                    const index = total === 0 ? 0 : (s.index - 1 + total) % total;
+                    this.flashcardReview = { ...this.flashcardReview, [subject.id]: { active: true, index, flipped: false } };
+                },
                 weekPillClass(week) {
                     const base = 'w-11 h-11 flex items-center justify-center rounded-lg text-sm font-bold transition';
                     if (week.id === this.selectedWeekId) return base + ' bg-purple-600 text-white';
@@ -1818,7 +1902,7 @@
                     subject[field] = data;
                     try {
                         await window.MemoSphereSupabase.updateRow('subjects', subject.id, { [field]: data });
-                        if (field === 'enrichment_resources' || field === 'hands_on_activities') {
+                        if (field === 'enrichment_resources' || field === 'hands_on_activities' || field === 'vocabulary_cards') {
                             this.syncFieldToTemplate(subject.subject_name, field, data);
                         }
                     } catch (err) {
@@ -1904,12 +1988,12 @@
                 },
                 sectionVisible(subject, key) {
                     const rules = {
-                        math:      { enrichment: false, study_memos: false, labs: false, hands_on: false, notebook: false, quizzes: false },
-                        electives: { enrichment: false, study_memos: false, labs: false, hands_on: false, notebook: false, quizzes: false },
-                        biology:   { enrichment: true,  study_memos: true,  labs: true,  hands_on: false, notebook: true,  quizzes: true },
-                        history:   { enrichment: true,  study_memos: true,  labs: false, hands_on: true,  notebook: true,  quizzes: true },
-                        ela:       { enrichment: true,  study_memos: true,  labs: false, hands_on: false, notebook: false, quizzes: true },
-                        generic:   { enrichment: true,  study_memos: true,  labs: true,  hands_on: true,  notebook: true,  quizzes: true }
+                        math:      { enrichment: false, study_memos: false, labs: false, hands_on: false, notebook: false, quizzes: false, vocabulary: false },
+                        electives: { enrichment: false, study_memos: false, labs: false, hands_on: false, notebook: false, quizzes: false, vocabulary: false },
+                        biology:   { enrichment: true,  study_memos: true,  labs: true,  hands_on: false, notebook: true,  quizzes: true,  vocabulary: false },
+                        history:   { enrichment: true,  study_memos: true,  labs: false, hands_on: true,  notebook: true,  quizzes: true,  vocabulary: false },
+                        ela:       { enrichment: true,  study_memos: true,  labs: false, hands_on: false, notebook: false, quizzes: true,  vocabulary: true },
+                        generic:   { enrichment: true,  study_memos: true,  labs: true,  hands_on: true,  notebook: true,  quizzes: true,  vocabulary: false }
                     };
                     const kind = this.subjectKind(subject);
                     const rule = rules[kind] || rules.generic;
@@ -2473,6 +2557,7 @@
                                 tasks: { tasks: [] },
                                 core_curriculum: t.core_curriculum || { fields: [] },
                                 enrichment_resources: t.enrichment_resources || { entries: [] },
+                                vocabulary_cards: t.vocabulary_cards || { entries: [] },
                                 hands_on_activities: t.hands_on_activities || { entries: [] },
                                 labs: t.labs || { entries: [] },
                                 notebook_content: t.notebook_content || {},
