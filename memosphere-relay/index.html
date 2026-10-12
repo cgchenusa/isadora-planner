@@ -271,11 +271,20 @@
             <div v-if="currentTab === 'subjects'" class="bg-white rounded-b-lg shadow-lg p-8">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">📚 Subjects</h2>
 
-                <!-- Week pill selector -->
+                <!-- School year selector (scopes the week pills below to one year at a time) -->
+                <div v-if="schoolYears.length > 1" class="flex items-center gap-2 mb-3">
+                    <span class="text-sm font-medium text-gray-600">School Year:</span>
+                    <select v-model="selectedSchoolYear" @change="onSchoolYearChange" class="text-sm border border-gray-300 rounded px-2 py-1">
+                        <option v-for="y in schoolYears" :key="y" :value="y">{{ y }}</option>
+                    </select>
+                </div>
+
+                <!-- Week pill selector (scoped to the selected school year) -->
                 <div class="flex items-center gap-2 flex-wrap mb-6">
                     <span class="text-sm font-medium text-gray-600 mr-1">Select Week:</span>
-                    <button v-for="week in weeks" :key="week.id" @click="selectedWeekId = week.id; selectedWeekSubjectId = null" :class="weekPillClass(week)">{{ week.week_number }}</button>
-                    <button v-if="canEditContent" @click="addWeekFormOpen = !addWeekFormOpen" class="ml-auto bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition">➕ Add Week</button>
+                    <button v-for="week in weeksForSelectedYear" :key="week.id" @click="selectedWeekId = week.id; selectedWeekSubjectId = null" :class="weekPillClass(week)">{{ week.week_number }}</button>
+                    <span v-if="weeksForSelectedYear.length === 0" class="text-sm text-gray-400">No weeks yet for {{ selectedSchoolYear }}.</span>
+                    <button v-if="canEditContent" @click="toggleAddWeekForm" class="ml-auto bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition">➕ Add Week</button>
                 </div>
 
                 <div v-if="addWeekFormOpen && canEditContent" class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-6 border-2 border-purple-200">
@@ -1188,6 +1197,7 @@
                     subjects: [],
                     selectedWeekId: null,
                     selectedWeekSubjectId: null,
+                    selectedSchoolYear: null,
                     addWeekFormOpen: false,
                     showAddSubjectForm: false,
                     newWeek: { week_number: 1, start_date: '', end_date: '', school_year: '2026-2027', notes: '' },
@@ -1319,11 +1329,24 @@
                     return this.academicCalendar.lpMeetings.find(m => m.date >= today) || null;
                 },
                 yearProgressStats() {
-                    const realWeeks = this.weeks.filter(w => w.week_number < 900);
+                    const realWeeks = this.weeksForSelectedYear.filter(w => w.week_number < 900);
                     const total = realWeeks.length;
                     const completed = realWeeks.filter(w => w.status === 'completed').length;
                     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
                     return { total, completed, pct };
+                },
+                // --- Multi school-year support: weeks never get re-numbered (week_number keeps
+                // climbing forever across years), but the Planner's week-pill list and progress
+                // stats are scoped to one school year at a time so old years don't pile up in one
+                // endless unlabeled row, and the parent can actually switch back to review a past year.
+                schoolYears() {
+                    const set = new Set(this.weeks.map(w => w.school_year).filter(Boolean));
+                    if (this.appConfig && this.appConfig.school_year) set.add(this.appConfig.school_year);
+                    return Array.from(set).sort();
+                },
+                weeksForSelectedYear() {
+                    if (!this.selectedSchoolYear) return this.weeks;
+                    return this.weeks.filter(w => w.school_year === this.selectedSchoolYear);
                 },
                 weekProgressList() {
                     return this.weeks
@@ -1450,8 +1473,14 @@
 
                         if (this.activeWeek) {
                             this.selectedWeekId = this.activeWeek.id;
+                            this.selectedSchoolYear = this.activeWeek.school_year || null;
                         } else if (this.weeks.length > 0) {
-                            this.selectedWeekId = this.weeks[0].id;
+                            const last = this.weeks[this.weeks.length - 1];
+                            this.selectedSchoolYear = last.school_year || null;
+                            const list = this.weeksForSelectedYear;
+                            this.selectedWeekId = list[list.length - 1] ? list[list.length - 1].id : this.weeks[0].id;
+                        } else if (this.appConfig && this.appConfig.school_year) {
+                            this.selectedSchoolYear = this.appConfig.school_year;
                         }
                         if (this.scopedSubjects.length > 0) {
                             this.selectedSubjectId = this.scopedSubjects[0].id;
@@ -1668,6 +1697,12 @@
                         if (result && result[0]) {
                             this.weeks.push(result[0]);
                             this.weeks.sort((a, b) => a.week_number - b.week_number);
+                            // Jump to whatever year/week was just created — matters most the day a new
+                            // school year's first week is added, so it doesn't silently land "off screen"
+                            // under whichever year was previously selected.
+                            this.selectedSchoolYear = result[0].school_year || this.selectedSchoolYear;
+                            this.selectedWeekId = result[0].id;
+                            this.selectedWeekSubjectId = null;
                             this.successMessage = `✨ Week ${result[0].week_number} created!`;
                             this.newWeek = { week_number: result[0].week_number + 1, start_date: '', end_date: '', school_year: result[0].school_year, notes: '' };
                             setTimeout(() => this.successMessage = null, 3000);
@@ -1858,6 +1893,20 @@
                     const s = this.flashcardState(subject.id);
                     const index = total === 0 ? 0 : (s.index - 1 + total) % total;
                     this.flashcardReview = { ...this.flashcardReview, [subject.id]: { active: true, index, flipped: false } };
+                },
+                onSchoolYearChange() {
+                    // Switching year: jump to that year's in-progress week if it has one,
+                    // otherwise its first week, otherwise clear selection (no weeks yet for that year).
+                    const list = this.weeksForSelectedYear;
+                    const inProgress = list.find(w => w.status === 'in_progress');
+                    this.selectedWeekId = inProgress ? inProgress.id : (list[0] ? list[0].id : null);
+                    this.selectedWeekSubjectId = null;
+                },
+                toggleAddWeekForm() {
+                    this.addWeekFormOpen = !this.addWeekFormOpen;
+                    if (this.addWeekFormOpen && this.selectedSchoolYear) {
+                        this.newWeek.school_year = this.selectedSchoolYear;
+                    }
                 },
                 weekPillClass(week) {
                     const base = 'w-11 h-11 flex items-center justify-center rounded-lg text-sm font-bold transition';
