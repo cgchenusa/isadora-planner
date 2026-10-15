@@ -89,6 +89,36 @@
         .ms-active-pill{ background:var(--ms-accent); color:#fff; }
         .ms-input{ border:1px solid var(--ms-line); background:var(--ms-surface-raised); color:var(--ms-ink); }
         .ms-input:focus{ outline:2px solid var(--ms-accent); outline-offset:1px; }
+
+        /* Renewed "ledger" look for subject-content panels, staged rollout: History first.
+           Scoped under .ms-subject-renewed (applied only when the open subject is History)
+           so Math/Biology/ELA/Electives panels are untouched for now. Targets the existing
+           Tailwind color-utility classes as stable selector hooks rather than rewriting
+           every template line. */
+        .ms-subject-renewed .rounded-lg.border{ border-radius:6px; box-shadow:2px 2px 0 var(--ms-line); }
+        .ms-subject-renewed .bg-slate-50, .ms-subject-renewed .bg-teal-50, .ms-subject-renewed .bg-orange-50,
+        .ms-subject-renewed .bg-violet-50, .ms-subject-renewed .bg-amber-50, .ms-subject-renewed .bg-indigo-50,
+        .ms-subject-renewed .bg-gray-50, .ms-subject-renewed .bg-white, .ms-subject-renewed .bg-gray-100 { background:var(--ms-surface-raised) !important; }
+        .ms-subject-renewed .border-slate-200, .ms-subject-renewed .border-teal-200, .ms-subject-renewed .border-orange-200,
+        .ms-subject-renewed .border-violet-200, .ms-subject-renewed .border-amber-300, .ms-subject-renewed .border-indigo-200,
+        .ms-subject-renewed .border-gray-200, .ms-subject-renewed .border-gray-300 { border-color:var(--ms-line) !important; }
+        .ms-subject-renewed p.font-semibold, .ms-subject-renewed label.font-semibold { font-family:var(--ms-font-display); }
+        .ms-subject-renewed .text-slate-600, .ms-subject-renewed .text-slate-700,
+        .ms-subject-renewed .text-teal-700, .ms-subject-renewed .text-teal-800,
+        .ms-subject-renewed .text-orange-700, .ms-subject-renewed .text-violet-700,
+        .ms-subject-renewed .text-amber-700, .ms-subject-renewed .text-indigo-700,
+        .ms-subject-renewed .text-gray-700, .ms-subject-renewed .text-gray-800 { color:var(--ms-ink) !important; }
+        .ms-subject-renewed .text-slate-500, .ms-subject-renewed .text-teal-600, .ms-subject-renewed .text-orange-600,
+        .ms-subject-renewed .text-violet-600, .ms-subject-renewed .text-amber-600,
+        .ms-subject-renewed .text-indigo-500, .ms-subject-renewed .text-indigo-600,
+        .ms-subject-renewed .text-gray-400, .ms-subject-renewed .text-gray-500, .ms-subject-renewed .text-gray-600 { color:var(--ms-ink-muted) !important; }
+        .ms-subject-renewed input, .ms-subject-renewed select, .ms-subject-renewed textarea{ background:var(--ms-surface-raised) !important; border-color:var(--ms-line) !important; color:var(--ms-ink) !important; border-radius:6px !important; }
+        .ms-subject-renewed input:focus, .ms-subject-renewed select:focus, .ms-subject-renewed textarea:focus{ outline:2px solid var(--ms-accent); outline-offset:1px; }
+        .ms-subject-renewed .bg-slate-500, .ms-subject-renewed .bg-orange-500, .ms-subject-renewed .bg-violet-600,
+        .ms-subject-renewed .bg-indigo-500, .ms-subject-renewed .bg-indigo-600,
+        .ms-subject-renewed .bg-amber-100, .ms-subject-renewed .bg-rose-100, .ms-subject-renewed .bg-blue-100, .ms-subject-renewed .bg-emerald-100 {
+            background:var(--ms-accent) !important; color:#fff !important; border:none !important;
+        }
     </style>
 </head>
 <body>
@@ -401,7 +431,7 @@
                     <div v-if="subjectsForSelectedWeek.length === 0" class="text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-600 text-lg">No subjects yet for this week</p></div>
 
                     <!-- Single subject detail view -->
-                    <div v-else-if="currentWeekSubject" class="space-y-3">
+                    <div v-else-if="currentWeekSubject" class="space-y-3" :class="{ 'ms-subject-renewed': subjectKind(currentWeekSubject) === 'history' }">
                         <div class="ms-card p-4 flex justify-between items-start flex-wrap gap-2">
                             <div class="flex items-center gap-3">
                                 <span class="rounded-full flex items-center justify-center flex-shrink-0" :style="{ width:'38px', height:'38px', border:'2px solid '+getSubjectColor(currentWeekSubject) }">{{ getSubjectEmoji(currentWeekSubject) }}</span>
