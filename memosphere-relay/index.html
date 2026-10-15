@@ -187,20 +187,20 @@
 
             <!-- DASHBOARD -->
             <div v-if="currentTab === 'dashboard'" class="ms-panel p-8 mb-8" style="border-top:none; border-radius:0 0 6px 6px;">
-                <p class="ms-ink-muted text-sm mb-6">Olá — aqui está o resumo{{ activeStudent ? (' de ' + (activeStudent.display_name || activeStudent.email)) : '' }}.</p>
+                <p class="ms-ink-muted text-sm mb-6">Hello — here's the summary{{ activeStudent ? (' for ' + (activeStudent.display_name || activeStudent.email)) : '' }}.</p>
 
                 <!-- Stat strip -->
                 <div class="ms-card flex flex-col sm:flex-row mb-8" style="overflow:hidden;">
                     <div class="flex-1 p-5" style="border-left:3px solid var(--ms-accent);">
-                        <p class="ms-ink-muted text-sm">Semanas no total</p>
+                        <p class="ms-ink-muted text-sm">Total Weeks</p>
                         <p class="ms-ink text-4xl font-bold mt-1">{{ weeks.length }}</p>
                     </div>
                     <div class="flex-1 p-5" style="border-left:3px solid var(--ms-moss);">
-                        <p class="ms-ink-muted text-sm">Matérias nesta semana</p>
+                        <p class="ms-ink-muted text-sm">Subjects This Week</p>
                         <p class="ms-ink text-4xl font-bold mt-1">{{ activeWeekSubjects.length }}</p>
                     </div>
                     <div class="flex-1 p-5" style="border-left:3px solid var(--ms-gold);">
-                        <p class="ms-ink-muted text-sm">Horas nesta semana</p>
+                        <p class="ms-ink-muted text-sm">Hours This Week</p>
                         <p class="ms-ink text-4xl font-bold mt-1">{{ activeWeekHours }}</p>
                     </div>
                 </div>
@@ -208,12 +208,12 @@
                 <!-- Active week -->
                 <div class="ms-card p-6 mb-6">
                     <div class="flex items-center justify-between flex-wrap gap-2 mb-1" style="border-bottom:1px solid var(--ms-line); padding-bottom:12px;">
-                        <h3 class="ms-font-display ms-ink text-lg font-semibold">Esta semana</h3>
-                        <span v-if="activeWeek" class="ms-ink-muted text-sm">Semana {{ activeWeek.week_number }} · {{ formatDateUS(activeWeek.start_date) }}–{{ formatDateUS(activeWeek.end_date) }}</span>
+                        <h3 class="ms-font-display ms-ink text-lg font-semibold">This Week</h3>
+                        <span v-if="activeWeek" class="ms-ink-muted text-sm">Week {{ activeWeek.week_number }} · {{ formatDateUS(activeWeek.start_date) }}–{{ formatDateUS(activeWeek.end_date) }}</span>
                     </div>
 
-                    <div v-if="!activeWeek" class="text-center py-8 ms-ink-muted text-sm">Nenhuma semana ativa. Marque uma semana como "em andamento" na aba Subjects. ➡️</div>
-                    <div v-else-if="activeWeekSubjects.length === 0" class="text-center py-8 ms-ink-muted text-sm">Ainda sem matérias nesta semana. Adicione uma na aba Subjects! ➡️</div>
+                    <div v-if="!activeWeek" class="text-center py-8 ms-ink-muted text-sm">No active week. Mark a week "in progress" in the Subjects tab. ➡️</div>
+                    <div v-else-if="activeWeekSubjects.length === 0" class="text-center py-8 ms-ink-muted text-sm">No subjects yet for this week. Add one in the Subjects tab! ➡️</div>
 
                     <div v-else>
                         <div v-for="subject in activeWeekSubjects" :key="subject.id" class="flex items-center gap-3 py-2.5" style="border-bottom:1px solid var(--ms-line);">
@@ -230,7 +230,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Academic Calendar -->
                     <div class="ms-card p-6">
-                        <h3 class="ms-font-display ms-ink text-lg font-semibold mb-1">🗓️ Calendário Acadêmico</h3>
+                        <h3 class="ms-font-display ms-ink text-lg font-semibold mb-1">🗓️ Academic Calendar</h3>
                         <p class="ms-ink-muted text-sm mb-4">{{ academicCalendar.source }} — {{ academicCalendar.schoolYear }}</p>
                         <ul class="space-y-2">
                             <li v-for="d in upcomingKeyDates" :key="d.label" class="flex items-center justify-between text-sm" :class="d.isPast ? 'opacity-40' : ''">
@@ -246,8 +246,8 @@
                     <!-- Learning Periods -->
                     <div class="ms-card p-6">
                         <h3 class="ms-font-display ms-ink text-lg font-semibold mb-1">📘 Learning Periods (LP)</h3>
-                        <p class="ms-ink-muted text-sm mb-4" v-if="currentLearningPeriod">Atualmente em LP {{ currentLearningPeriod.number }} de 10 ({{ formatDateRange(currentLearningPeriod.start, currentLearningPeriod.end) }})</p>
-                        <p class="ms-ink-muted text-sm mb-4" v-else>Nenhum Learning Period ativo agora.</p>
+                        <p class="ms-ink-muted text-sm mb-4" v-if="currentLearningPeriod">Currently in LP {{ currentLearningPeriod.number }} of 10 ({{ formatDateRange(currentLearningPeriod.start, currentLearningPeriod.end) }})</p>
+                        <p class="ms-ink-muted text-sm mb-4" v-else>No active Learning Period right now.</p>
 
                         <div class="flex flex-wrap gap-1.5 mb-5">
                             <span v-for="lp in academicCalendar.learningPeriods" :key="lp.number"
@@ -256,13 +256,13 @@
                                   :title="formatDateRange(lp.start, lp.end)">{{ lp.number }}</span>
                         </div>
 
-                        <h4 class="ms-ink text-sm font-semibold mb-2">LP Meetings (Semestre 1)</h4>
+                        <h4 class="ms-ink text-sm font-semibold mb-2">LP Meetings (Semester 1)</h4>
                         <ul class="space-y-1.5">
                             <li v-for="m in academicCalendar.lpMeetings" :key="m.lp" class="flex items-center justify-between text-sm" :class="m.date < todayISO ? 'opacity-40' : ''">
                                 <span class="ms-ink">LP{{ m.lp }} Meeting</span>
                                 <span class="flex items-center gap-2">
                                     <span class="ms-ink-muted">{{ formatDateShort(m.date) }}, {{ m.time }}</span>
-                                    <span v-if="nextLpMeeting && nextLpMeeting.lp === m.lp" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Próxima</span>
+                                    <span v-if="nextLpMeeting && nextLpMeeting.lp === m.lp" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Next</span>
                                 </span>
                             </li>
                         </ul>
@@ -272,7 +272,7 @@
 
             <!-- PLANNER -->
             <div v-if="currentTab === 'planner'" class="ms-panel p-8" style="border-top:none; border-radius:0 0 6px 6px;">
-                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-6">Planner — Progresso do Ano</h2>
+                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-6">Planner — Year Progress</h2>
 
                 <div class="ms-card p-6 mb-6">
                     <div class="flex justify-between items-center mb-2">
@@ -301,7 +301,7 @@
 
             <!-- SUBJECTS -->
             <div v-if="currentTab === 'subjects'" class="ms-panel p-8" style="border-top:none; border-radius:0 0 6px 6px;">
-                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-6">Matérias</h2>
+                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-6">Subjects</h2>
 
                 <!-- School year selector (scopes the week pills below to one year at a time) -->
                 <div v-if="schoolYears.length > 1" class="flex items-center gap-2 mb-3">
@@ -1086,7 +1086,7 @@
 
             <!-- REVIEW -->
             <div v-if="currentTab === 'review'" class="ms-panel p-8" style="border-top:none; border-radius:0 0 6px 6px;">
-                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-2">Revisão Espaçada</h2>
+                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-2">Spaced Review</h2>
                 <p class="text-sm ms-ink-muted mb-6">Questions resurface here on a schedule: get one right and it comes back less often, get it wrong and it comes back tomorrow.</p>
 
                 <div v-if="reviewSessionItems.length === 0" class="text-center py-12 ms-panel ms-ink-muted">
