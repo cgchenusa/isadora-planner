@@ -1132,10 +1132,10 @@
                 <div v-if="visibleBooks.length === 0" class="text-center py-12 ms-panel"><p class="ms-ink-muted text-lg">No books logged yet</p></div>
 
                 <div v-else class="space-y-2">
-                    <div v-for="book in visibleBooks" :key="book.id" class="ms-card p-3">
+                    <div v-for="(book, bi) in visibleBooks" :key="book.id" class="ms-card p-3">
                         <div class="flex justify-between items-center gap-2 flex-wrap">
                             <div class="flex items-center gap-2 flex-wrap">
-                                <h4 class="font-bold ms-ink">{{ book.title }}<span v-if="book.author" class="font-normal ms-ink-muted"> — {{ book.author }}</span></h4>
+                                <h4 class="font-bold ms-ink"><span class="ms-ink-muted">{{ bi + 1 }}.</span> {{ book.title }}<span v-if="book.author" class="font-normal ms-ink-muted"> — {{ book.author }}</span></h4>
                                 <span v-if="book.subject_name" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{{ book.subject_name }}</span>
                                 <span v-else class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Free Reading</span>
                             </div>
