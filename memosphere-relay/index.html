@@ -1002,20 +1002,33 @@
                 <!-- Take Quiz flow -->
                 <template v-else>
                     <div v-if="!quizResult">
-                        <h3 class="ms-font-display ms-ink text-xl font-semibold mb-4">▶️ {{ takingQuiz.title }}</h3>
-                        <form @submit.prevent="finishQuiz" class="space-y-4">
-                            <div v-for="q in getQuestions(takingQuiz.id)" :key="q.id" class="ms-panel p-4">
-                                <p class="font-semibold ms-ink mb-2">{{ q.question_number }}. {{ q.question_text }}</p>
-                                <div v-for="(opt, oi) in q.options" :key="oi" class="flex items-center gap-2 mb-1">
-                                    <input type="radio" :name="'q' + q.id" :value="oi" v-model.number="takeAnswers[q.id]" required />
-                                    <label>{{ opt }}</label>
-                                </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="ms-font-display ms-ink text-xl font-semibold">▶️ {{ takingQuiz.title }}</h3>
+                            <span class="text-sm ms-ink-muted">Question {{ currentQuestionIndex + 1 }} / {{ quizSessionQuestions.length }}</span>
+                        </div>
+                        <div v-if="currentSessionQuestion" class="ms-panel p-4">
+                            <p class="font-semibold ms-ink mb-3">{{ currentSessionQuestion.question_text }}</p>
+                            <div v-for="(opt, oi) in currentSessionQuestion.options" :key="oi" class="flex items-center gap-2 mb-2 p-2 rounded"
+                                 :class="answeredCurrent ? (oi === currentSessionQuestion.correct_option_index ? 'bg-green-50 border border-green-400' : (oi === selectedOption ? 'bg-red-50 border border-red-400' : '')) : ''">
+                                <input type="radio" name="sessionq" :value="oi" v-model.number="selectedOption" :disabled="answeredCurrent" />
+                                <label class="flex-1">{{ opt }}</label>
+                                <span v-if="answeredCurrent && oi === currentSessionQuestion.correct_option_index" class="text-green-600 text-xs font-semibold">✓ Correct</span>
+                                <span v-else-if="answeredCurrent && oi === selectedOption" class="text-red-600 text-xs font-semibold">✕ Your answer</span>
                             </div>
-                            <div class="flex gap-3">
-                                <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">✅ Submit Quiz</button>
+
+                            <div v-if="answeredCurrent" class="mt-3 p-3 rounded" :class="lastAnswerCorrect ? 'bg-green-50 border border-green-300' : 'bg-red-50 border border-red-300'">
+                                <p class="font-bold" :class="lastAnswerCorrect ? 'text-green-700' : 'text-red-700'">{{ lastAnswerCorrect ? '🎉 Correct!' : '❌ Not quite.' }}</p>
+                                <p v-if="currentSessionQuestion.explanation" class="text-sm ms-ink-muted mt-1">{{ currentSessionQuestion.explanation }}</p>
+                            </div>
+
+                            <div class="flex gap-3 mt-4">
+                                <button v-if="!answeredCurrent" type="button" @click="submitAnswer" :disabled="selectedOption === null" class="flex-1 disabled:bg-gray-400 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">✅ Submit Answer</button>
+                                <button v-else type="button" @click="nextQuestion" class="flex-1 text-white font-bold py-2 px-4 rounded-lg transition" style="background:var(--ms-accent);">
+                                    {{ currentQuestionIndex < quizSessionQuestions.length - 1 ? 'Next Question ➡️' : '🏁 Finish Quiz' }}
+                                </button>
                                 <button type="button" @click="cancelQuiz" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition">Cancel</button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                     <div v-else class="text-center py-8">
                         <p class="text-5xl mb-4">{{ quizResult.correct === quizResult.total ? '🎉' : '📝' }}</p>
@@ -1301,6 +1314,11 @@
                     takingQuiz: null,
                     takeAnswers: {},
                     quizResult: null,
+                    quizSessionQuestions: [],
+                    currentQuestionIndex: 0,
+                    selectedOption: null,
+                    answeredCurrent: false,
+                    lastAnswerCorrect: null,
                     books: [],
                     newBook: { title: '', author: '', total_pages: null, source: 'curriculum', subject_name: '', week_id: null },
                     quizAttempts: [],
@@ -1493,6 +1511,9 @@
                 quizzesForSelectedSubject() {
                     if (!this.selectedSubjectId) return [];
                     return this.quizzes.filter(q => q.subject_id === this.selectedSubjectId);
+                },
+                currentSessionQuestion() {
+                    return this.quizSessionQuestions[this.currentQuestionIndex] || null;
                 },
                 dueReviews() {
                     const now = Date.now();
@@ -2687,33 +2708,64 @@
                 },
                 startQuiz(quiz) {
                     this.takingQuiz = quiz;
+                    const allQuestions = this.getQuestions(quiz.id);
+                    const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+                    this.quizSessionQuestions = shuffled.slice(0, 10);
+                    this.currentQuestionIndex = 0;
                     this.takeAnswers = {};
+                    this.selectedOption = null;
+                    this.answeredCurrent = false;
+                    this.lastAnswerCorrect = null;
                     this.quizResult = null;
                 },
                 cancelQuiz() {
                     this.takingQuiz = null;
+                    this.quizSessionQuestions = [];
+                    this.currentQuestionIndex = 0;
                     this.takeAnswers = {};
+                    this.selectedOption = null;
+                    this.answeredCurrent = false;
+                    this.lastAnswerCorrect = null;
                     this.quizResult = null;
                 },
+                async submitAnswer() {
+                    const q = this.currentSessionQuestion;
+                    if (!q || this.selectedOption === null || this.selectedOption === undefined) return;
+                    const isCorrect = this.selectedOption === q.correct_option_index;
+                    this.takeAnswers[q.id] = this.selectedOption;
+                    this.answeredCurrent = true;
+                    this.lastAnswerCorrect = isCorrect;
+                    try {
+                        const attemptResult = await window.MemoSphereSupabase.insertRow('quiz_attempts', {
+                            quiz_id: this.takingQuiz.id,
+                            question_id: q.id,
+                            user_email: (this.myProfile && this.myProfile.email) || (this.session && this.session.user && this.session.user.email),
+                            answer_given: this.selectedOption,
+                            is_correct: isCorrect,
+                            review_interval: isCorrect ? 'weekly' : 'daily',
+                            attempt_number: 1
+                        });
+                        if (attemptResult && attemptResult[0]) this.quizAttempts.push(attemptResult[0]);
+                    } catch (err) {
+                        console.error('Error recording quiz attempt:', err);
+                        this.globalError = err.message || 'Failed to record answer';
+                    }
+                },
+                nextQuestion() {
+                    if (this.currentQuestionIndex < this.quizSessionQuestions.length - 1) {
+                        this.currentQuestionIndex++;
+                        this.selectedOption = null;
+                        this.answeredCurrent = false;
+                        this.lastAnswerCorrect = null;
+                    } else {
+                        this.finishQuiz();
+                    }
+                },
                 async finishQuiz() {
-                    const questions = this.getQuestions(this.takingQuiz.id);
+                    const questions = this.quizSessionQuestions;
                     let correct = 0;
                     try {
-                        for (const q of questions) {
-                            const given = this.takeAnswers[q.id];
-                            const isCorrect = given === q.correct_option_index;
-                            if (isCorrect) correct++;
-                            const attemptResult = await window.MemoSphereSupabase.insertRow('quiz_attempts', {
-                                quiz_id: this.takingQuiz.id,
-                                question_id: q.id,
-                                user_email: (this.myProfile && this.myProfile.email) || (this.session && this.session.user && this.session.user.email),
-                                answer_given: given,
-                                is_correct: isCorrect,
-                                review_interval: isCorrect ? 'weekly' : 'daily',
-                                attempt_number: 1
-                            });
-                            if (attemptResult && attemptResult[0]) this.quizAttempts.push(attemptResult[0]);
-                        }
+                        questions.forEach(q => { if (this.takeAnswers[q.id] === q.correct_option_index) correct++; });
 
                         const coinsEarned = correct * 10;
                         const subject = this.subjects.find(s => s.id === this.selectedSubjectId);
