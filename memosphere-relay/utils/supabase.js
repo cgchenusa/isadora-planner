@@ -358,6 +358,23 @@ async function createMember({ email, password, role, display_name }) {
     }
 }
 
+async function uploadMaterial(bucket, path, file) {
+    try {
+        const client = getSupabase();
+        if (!client) return { error: { message: 'Supabase client not initialized' } };
+        const { data, error } = await client.storage.from(bucket).upload(path, file, {
+            cacheControl: '3600',
+            upsert: false
+        });
+        if (error) return { error: { message: error.message } };
+        const { data: urlData } = client.storage.from(bucket).getPublicUrl(data.path);
+        return { data: { path: data.path, publicUrl: urlData.publicUrl } };
+    } catch (err) {
+        console.error('❌ Error uploading material:', err.message);
+        return { error: { message: err.message } };
+    }
+}
+
 async function anyProfilesExist() {
     try {
         const client = getSupabase();
@@ -391,6 +408,7 @@ window.MemoSphereSupabase = {
     authSignIn,
     authSignUp,
     authSignOut,
+    uploadMaterial,
     anyProfilesExist,
     getMyProfile,
     listProfiles,
