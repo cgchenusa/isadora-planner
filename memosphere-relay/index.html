@@ -222,6 +222,7 @@
                     <button @click="currentTab = 'planner'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'planner' ? 'active' : 'text-gray-600 hover:text-gray-900']">🗂️ Planner</button>
                     <button @click="currentTab = 'subjects'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'subjects' ? 'active' : 'text-gray-600 hover:text-gray-900']">📚 Subjects</button>
                     <button @click="currentTab = 'quizzes'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'quizzes' ? 'active' : 'text-gray-600 hover:text-gray-900']">🧠 Quizzes</button>
+                    <button @click="currentTab = 'arena'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'arena' ? 'active' : 'text-gray-600 hover:text-gray-900']">🏟️ Arena</button>
                     <button @click="currentTab = 'books'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'books' ? 'active' : 'text-gray-600 hover:text-gray-900']">📖 Books</button>
                     <button @click="currentTab = 'review'; computeReviewSession()" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'review' ? 'active' : 'text-gray-600 hover:text-gray-900']">🔁 Review <span v-if="dueReviews.length" class="ml-1 bg-red-500 text-white text-xs rounded-full px-2">{{ dueReviews.length }}</span></button>
                     <button v-if="isParent" @click="currentTab = 'family'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'family' ? 'active' : 'text-gray-600 hover:text-gray-900']">👪 Family</button>
@@ -1039,6 +1040,73 @@
                         <p class="text-5xl mb-4">{{ quizResult.correct === quizResult.total ? '🎉' : '📝' }}</p>
                         <h3 class="ms-font-display ms-ink text-2xl font-semibold mb-2">{{ quizResult.correct }} / {{ quizResult.total }} correct</h3>
                         <p class="ms-ink-muted mb-6">+{{ quizResult.coinsEarned }} coins earned</p>
+                        <div class="flex gap-3 justify-center flex-wrap">
+                            <button v-if="remainingQuizQuestions.length > 0" @click="continueRemainingQuiz" class="text-white font-bold py-2 px-6 rounded-lg transition" style="background:var(--ms-moss);">📋 Continue with remaining ({{ remainingQuizQuestions.length }})</button>
+                            <button @click="cancelQuiz" class="text-white font-bold py-2 px-6 rounded-lg transition" style="background:var(--ms-accent);">Done</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- ARENA: cumulative quiz pool across all completed weeks, by subject -->
+            <div v-if="currentTab === 'arena'" class="ms-panel p-8" style="border-top:none; border-radius:0 0 6px 6px;">
+                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-1">🏟️ Arena</h2>
+                <p class="ms-ink-muted text-sm mb-6">A cumulative quiz pulling from every week you've marked "Completed" — great for long-term review.</p>
+
+                <template v-if="!takingQuiz">
+                    <div v-if="arenaSubjectNames.length === 0" class="text-center py-12 ms-panel ms-ink-muted">No completed weeks with quiz questions yet. Mark a week's subject as "Completed" in the Subjects tab to unlock it here.</div>
+                    <div v-else class="ms-card p-6" style="border:2px solid var(--ms-accent); max-width:480px;">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium ms-ink-muted mb-1">Subject</label>
+                            <select v-model="arenaSubjectName" class="ms-input w-full px-4 py-2 rounded-lg">
+                                <option value="" disabled>Choose a subject…</option>
+                                <option v-for="name in arenaSubjectNames" :key="name" :value="name">{{ name }} ({{ arenaPoolCountFor(name) }} questions available)</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium ms-ink-muted mb-1">How many questions?</label>
+                            <select v-model.number="arenaQuestionCount" class="ms-input w-full px-4 py-2 rounded-lg">
+                                <option v-for="n in [15, 20, 25, 30]" :key="n" :value="n">{{ n }}</option>
+                            </select>
+                        </div>
+                        <button @click="startArenaQuiz" :disabled="!arenaSubjectName" class="w-full disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition" style="background:var(--ms-accent);">🚀 Start Arena Quiz</button>
+                    </div>
+                </template>
+
+                <template v-else>
+                    <div v-if="!quizResult">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="ms-font-display ms-ink text-xl font-semibold">{{ takingQuiz.title }}</h3>
+                            <span class="text-sm ms-ink-muted">Question {{ currentQuestionIndex + 1 }} / {{ quizSessionQuestions.length }}</span>
+                        </div>
+                        <div v-if="currentSessionQuestion" class="ms-panel p-4">
+                            <p class="font-semibold ms-ink mb-3">{{ currentSessionQuestion.question_text }}</p>
+                            <div v-for="(opt, oi) in currentSessionQuestion.options" :key="oi" class="flex items-center gap-2 mb-2 p-2 rounded"
+                                 :class="answeredCurrent ? (oi === currentSessionQuestion.correct_option_index ? 'bg-green-50 border border-green-400' : (oi === selectedOption ? 'bg-red-50 border border-red-400' : '')) : ''">
+                                <input type="radio" name="arenaq" :value="oi" v-model.number="selectedOption" :disabled="answeredCurrent" />
+                                <label class="flex-1">{{ opt }}</label>
+                                <span v-if="answeredCurrent && oi === currentSessionQuestion.correct_option_index" class="text-green-600 text-xs font-semibold">✓ Correct</span>
+                                <span v-else-if="answeredCurrent && oi === selectedOption" class="text-red-600 text-xs font-semibold">✕ Your answer</span>
+                            </div>
+
+                            <div v-if="answeredCurrent" class="mt-3 p-3 rounded" :class="lastAnswerCorrect ? 'bg-green-50 border border-green-300' : 'bg-red-50 border border-red-300'">
+                                <p class="font-bold" :class="lastAnswerCorrect ? 'text-green-700' : 'text-red-700'">{{ lastAnswerCorrect ? '🎉 Correct!' : '❌ Not quite.' }}</p>
+                                <p v-if="currentSessionQuestion.explanation" class="text-sm ms-ink-muted mt-1">{{ currentSessionQuestion.explanation }}</p>
+                            </div>
+
+                            <div class="flex gap-3 mt-4">
+                                <button v-if="!answeredCurrent" type="button" @click="submitAnswer" :disabled="selectedOption === null" class="flex-1 disabled:bg-gray-400 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">✅ Submit Answer</button>
+                                <button v-else type="button" @click="nextQuestion" class="flex-1 text-white font-bold py-2 px-4 rounded-lg transition" style="background:var(--ms-accent);">
+                                    {{ currentQuestionIndex < quizSessionQuestions.length - 1 ? 'Next Question ➡️' : '🏁 Finish Quiz' }}
+                                </button>
+                                <button type="button" @click="cancelQuiz" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="text-center py-8">
+                        <p class="text-5xl mb-4">{{ quizResult.correct === quizResult.total ? '🎉' : '📝' }}</p>
+                        <h3 class="ms-font-display ms-ink text-2xl font-semibold mb-2">{{ quizResult.correct }} / {{ quizResult.total }} correct</h3>
+                        <p class="ms-ink-muted mb-6">+{{ quizResult.coinsEarned }} coins earned</p>
                         <button @click="cancelQuiz" class="text-white font-bold py-2 px-6 rounded-lg transition" style="background:var(--ms-accent);">Done</button>
                     </div>
                 </template>
@@ -1233,6 +1301,29 @@
                         </form>
                     </div>
                 </div>
+
+                <div class="mt-10" v-if="activeStudent">
+                    <h3 class="ms-font-display ms-ink font-semibold mb-3">📊 Quiz Report — {{ activeStudent.display_name || activeStudent.email }}</h3>
+                    <div class="ms-card p-4 mb-4">
+                        <p class="ms-ink text-lg font-bold">{{ familyQuizReport.overall.correct }} / {{ familyQuizReport.overall.total }} correct overall{{ familyQuizReport.overall.total ? ' (' + familyQuizReport.overall.pct + '%)' : '' }}</p>
+                    </div>
+                    <div v-if="familyQuizReport.bySubject.length === 0" class="text-sm ms-ink-muted mb-6">No quiz attempts recorded yet.</div>
+                    <div v-else class="grid md:grid-cols-2 gap-3 mb-6">
+                        <div v-for="s in familyQuizReport.bySubject" :key="s.name" class="ms-card p-3 flex items-center justify-between">
+                            <span class="ms-ink font-medium">{{ s.name }}</span>
+                            <span class="text-sm ms-ink-muted">{{ s.correct }}/{{ s.total }} · {{ s.pct }}%</span>
+                        </div>
+                    </div>
+                    <div v-if="familyQuizReport.missed.length > 0">
+                        <h4 class="text-sm font-semibold ms-ink-muted mb-2">Most missed questions</h4>
+                        <ul class="space-y-1">
+                            <li v-for="m in familyQuizReport.missed" :key="m.question" class="text-sm ms-ink flex justify-between gap-3">
+                                <span class="flex-1">{{ m.question }}</span>
+                                <span class="ms-ink-muted flex-shrink-0">missed {{ m.misses }}×</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -1326,6 +1417,9 @@
                     lastAnswerCorrect: null,
                     uploadingMaterial: false,
                     materialUploadError: '',
+                    arenaSubjectName: '',
+                    arenaQuestionCount: 20,
+                    arenaMode: false,
                     books: [],
                     newBook: { title: '', author: '', total_pages: null, source: 'curriculum', subject_name: '', week_id: null },
                     quizAttempts: [],
@@ -1518,6 +1612,82 @@
                 quizzesForSelectedSubject() {
                     if (!this.selectedSubjectId) return [];
                     return this.quizzes.filter(q => q.subject_id === this.selectedSubjectId);
+                },
+                // Questions from the current weekly quiz that weren't asked in this session yet.
+                remainingQuizQuestions() {
+                    if (!this.takingQuiz || this.arenaMode) return [];
+                    const allQuestions = this.getQuestions(this.takingQuiz.id);
+                    const askedIds = new Set(this.quizSessionQuestions.map(q => q.id));
+                    return allQuestions.filter(q => !askedIds.has(q.id));
+                },
+                // --- Arena: cumulative quiz pool across all "completed" weeks, grouped by subject name ---
+                arenaCompletedSubjects() {
+                    return this.scopedSubjects.filter(s => s.status === 'completed');
+                },
+                arenaSubjectNames() {
+                    const names = new Set();
+                    this.arenaCompletedSubjects.forEach(s => {
+                        if (this.arenaPoolCountFor(s.subject_name) > 0) names.add(s.subject_name);
+                    });
+                    return Array.from(names).sort();
+                },
+                arenaPoolQuestions() {
+                    if (!this.arenaSubjectName) return [];
+                    const subjectIds = new Set(
+                        this.arenaCompletedSubjects
+                            .filter(s => s.subject_name === this.arenaSubjectName)
+                            .map(s => s.id)
+                    );
+                    const quizIds = new Set(this.quizzes.filter(q => subjectIds.has(q.subject_id)).map(q => q.id));
+                    return this.quizQuestions.filter(q => quizIds.has(q.quiz_id));
+                },
+                // --- Parent report: correct/incorrect breakdown for the active student, restricted
+                // to attempts actually answered by that student's own email (keeps parent/guest
+                // testing out of their report) and to quizzes under that student's own subjects.
+                familyQuizReport() {
+                    const empty = { overall: { correct: 0, total: 0, pct: 0 }, bySubject: [], missed: [] };
+                    if (!this.activeStudent) return empty;
+                    const studentEmail = this.activeStudent.email;
+                    const subjectIds = new Set(this.scopedSubjects.map(s => s.id));
+                    const quizToSubject = {};
+                    this.quizzes.forEach(q => { quizToSubject[q.id] = q.subject_id; });
+                    const relevant = this.quizAttempts.filter(a =>
+                        a.user_email === studentEmail && subjectIds.has(quizToSubject[a.quiz_id])
+                    );
+                    if (relevant.length === 0) return empty;
+
+                    const bySubjectMap = {};
+                    const missCounts = {};
+                    relevant.forEach(a => {
+                        const subjId = quizToSubject[a.quiz_id];
+                        const subj = this.subjects.find(s => s.id === subjId);
+                        const name = (subj && subj.subject_name) || 'Other';
+                        if (!bySubjectMap[name]) bySubjectMap[name] = { correct: 0, total: 0 };
+                        bySubjectMap[name].total++;
+                        if (a.is_correct) bySubjectMap[name].correct++;
+                        else missCounts[a.question_id] = (missCounts[a.question_id] || 0) + 1;
+                    });
+
+                    const bySubject = Object.keys(bySubjectMap).map(name => ({
+                        name,
+                        correct: bySubjectMap[name].correct,
+                        total: bySubjectMap[name].total,
+                        pct: Math.round(100 * bySubjectMap[name].correct / bySubjectMap[name].total)
+                    })).sort((a, b) => b.total - a.total);
+
+                    const overallCorrect = relevant.filter(a => a.is_correct).length;
+                    const overallTotal = relevant.length;
+
+                    const missed = Object.keys(missCounts).map(qid => {
+                        const q = this.quizQuestions.find(qq => String(qq.id) === String(qid));
+                        return { question: q ? q.question_text : 'Unknown question', misses: missCounts[qid] };
+                    }).sort((a, b) => b.misses - a.misses).slice(0, 10);
+
+                    return {
+                        overall: { correct: overallCorrect, total: overallTotal, pct: Math.round(100 * overallCorrect / overallTotal) },
+                        bySubject,
+                        missed
+                    };
                 },
                 currentSessionQuestion() {
                     return this.quizSessionQuestions[this.currentQuestionIndex] || null;
@@ -2621,6 +2791,29 @@
                 getQuestions(quizId) {
                     return this.quizQuestions.filter(q => q.quiz_id === quizId);
                 },
+                arenaPoolCountFor(subjectName) {
+                    const subjectIds = new Set(
+                        this.arenaCompletedSubjects
+                            .filter(s => s.subject_name === subjectName)
+                            .map(s => s.id)
+                    );
+                    const quizIds = new Set(this.quizzes.filter(q => subjectIds.has(q.subject_id)).map(q => q.id));
+                    return this.quizQuestions.filter(q => quizIds.has(q.quiz_id)).length;
+                },
+                startArenaQuiz() {
+                    const pool = this.arenaPoolQuestions;
+                    if (!pool.length) return;
+                    this.takingQuiz = { id: null, title: '🏟️ Arena — ' + this.arenaSubjectName + ' (cumulative)' };
+                    this.arenaMode = true;
+                    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+                    this.quizSessionQuestions = shuffled.slice(0, Math.min(this.arenaQuestionCount, pool.length));
+                    this.currentQuestionIndex = 0;
+                    this.takeAnswers = {};
+                    this.selectedOption = null;
+                    this.answeredCurrent = false;
+                    this.lastAnswerCorrect = null;
+                    this.quizResult = null;
+                },
                 ensureNewQuestionSlot(quizId) {
                     if (!this.newQuestion[quizId]) {
                         this.newQuestion[quizId] = { question_text: '', options: ['', '', '', ''], correct_option_index: 0, explanation: '' };
@@ -2754,6 +2947,7 @@
                 },
                 startQuiz(quiz) {
                     this.takingQuiz = quiz;
+                    this.arenaMode = false;
                     const allQuestions = this.getQuestions(quiz.id);
                     const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
                     this.quizSessionQuestions = shuffled.slice(0, 10);
@@ -2764,8 +2958,26 @@
                     this.lastAnswerCorrect = null;
                     this.quizResult = null;
                 },
+                // After finishing a 10-question session, lets the student keep going with
+                // whichever questions from the full quiz weren't asked this round.
+                continueRemainingQuiz() {
+                    if (!this.takingQuiz || this.arenaMode) return;
+                    const allQuestions = this.getQuestions(this.takingQuiz.id);
+                    const askedIds = new Set(this.quizSessionQuestions.map(q => q.id));
+                    const remaining = allQuestions.filter(q => !askedIds.has(q.id));
+                    if (remaining.length === 0) return;
+                    const shuffled = [...remaining].sort(() => Math.random() - 0.5);
+                    this.quizSessionQuestions = shuffled.slice(0, 10);
+                    this.currentQuestionIndex = 0;
+                    this.takeAnswers = {};
+                    this.selectedOption = null;
+                    this.answeredCurrent = false;
+                    this.lastAnswerCorrect = null;
+                    this.quizResult = null;
+                },
                 cancelQuiz() {
                     this.takingQuiz = null;
+                    this.arenaMode = false;
                     this.quizSessionQuestions = [];
                     this.currentQuestionIndex = 0;
                     this.takeAnswers = {};
@@ -2783,7 +2995,7 @@
                     this.lastAnswerCorrect = isCorrect;
                     try {
                         const attemptResult = await window.MemoSphereSupabase.insertRow('quiz_attempts', {
-                            quiz_id: this.takingQuiz.id,
+                            quiz_id: q.quiz_id,
                             question_id: q.id,
                             user_email: (this.myProfile && this.myProfile.email) || (this.session && this.session.user && this.session.user.email),
                             answer_given: this.selectedOption,
@@ -2814,7 +3026,7 @@
                         questions.forEach(q => { if (this.takeAnswers[q.id] === q.correct_option_index) correct++; });
 
                         const coinsEarned = correct * 10;
-                        const subject = this.subjects.find(s => s.id === this.selectedSubjectId);
+                        const subject = this.arenaMode ? null : this.subjects.find(s => s.id === this.selectedSubjectId);
                         if (subject) {
                             const newCorrect = (subject.correct_answers || 0) + correct;
                             const newStars = (subject.stars_earned || 0) + (correct === questions.length ? 1 : 0);
