@@ -2187,7 +2187,7 @@
                 // Sections default OPEN; collapsing is explicit (key set to false)
                 isSectionOpen(subjectId, field) {
                     const key = subjectId + '_' + field;
-                    return this.sectionOpen[key] !== false;
+                    return this.sectionOpen[key] === true;
                 },
                 toggleSectionOpen(subjectId, field) {
                     const key = subjectId + '_' + field;
