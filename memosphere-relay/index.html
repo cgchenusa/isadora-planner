@@ -222,7 +222,7 @@
                     <button @click="currentTab = 'planner'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'planner' ? 'active' : 'text-gray-600 hover:text-gray-900']">🗂️ Planner</button>
                     <button @click="currentTab = 'subjects'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'subjects' ? 'active' : 'text-gray-600 hover:text-gray-900']">📚 Subjects</button>
                     <button @click="currentTab = 'quizzes'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'quizzes' ? 'active' : 'text-gray-600 hover:text-gray-900']">🧠 Quizzes</button>
-                    <button @click="currentTab = 'arena'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'arena' ? 'active' : 'text-gray-600 hover:text-gray-900']">🏟️ Arena</button>
+                    <button @click="currentTab = 'arena'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'arena' ? 'active' : 'text-gray-600 hover:text-gray-900']">🏟️ Memo Arena</button>
                     <button @click="currentTab = 'books'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'books' ? 'active' : 'text-gray-600 hover:text-gray-900']">📖 Books</button>
                     <button @click="currentTab = 'review'; computeReviewSession()" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'review' ? 'active' : 'text-gray-600 hover:text-gray-900']">🔁 Review <span v-if="dueReviews.length" class="ml-1 bg-red-500 text-white text-xs rounded-full px-2">{{ dueReviews.length }}</span></button>
                     <button v-if="isParent" @click="currentTab = 'family'" :class="['tab-button whitespace-nowrap px-3 py-2 text-sm font-medium', currentTab === 'family' ? 'active' : 'text-gray-600 hover:text-gray-900']">👪 Family</button>
@@ -1050,7 +1050,7 @@
 
             <!-- ARENA: cumulative quiz pool across all completed weeks, by subject -->
             <div v-if="currentTab === 'arena'" class="ms-panel p-8" style="border-top:none; border-radius:0 0 6px 6px;">
-                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-1">🏟️ Arena</h2>
+                <h2 class="ms-font-display ms-ink text-xl font-semibold mb-1">🏟️ Memo Arena</h2>
                 <p class="ms-ink-muted text-sm mb-6">A cumulative quiz pulling from every week you've marked "Completed" — great for long-term review.</p>
 
                 <template v-if="!takingQuiz">
@@ -2803,7 +2803,7 @@
                 startArenaQuiz() {
                     const pool = this.arenaPoolQuestions;
                     if (!pool.length) return;
-                    this.takingQuiz = { id: null, title: '🏟️ Arena — ' + this.arenaSubjectName + ' (cumulative)' };
+                    this.takingQuiz = { id: null, title: '🏟️ Memo Arena — ' + this.arenaSubjectName + ' (cumulative)' };
                     this.arenaMode = true;
                     const shuffled = [...pool].sort(() => Math.random() - 0.5);
                     this.quizSessionQuestions = shuffled.slice(0, Math.min(this.arenaQuestionCount, pool.length));
