@@ -134,40 +134,40 @@
     <div id="app" v-cloak :class="studentToneClass">
         <!-- Auth gate: login / sign up screen -->
         <div v-if="authChecked && !session" class="min-h-screen flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-sm">
-                <h1 class="text-2xl font-bold text-purple-600 text-center mb-1">MemoSphere</h1>
-                <p class="text-gray-500 text-sm text-center mb-6">{{ authMode === 'login' ? 'Sign in to continue' : 'Create the parent account' }}</p>
+            <div class="ms-card p-8 w-full max-w-sm">
+                <h1 class="ms-font-display ms-accent-text text-center mb-1" style="font-size:28px; font-weight:600;">MemoSphere</h1>
+                <p class="ms-ink-muted text-sm text-center mb-6">{{ authMode === 'login' ? 'Sign in to continue' : 'Create the parent account' }}</p>
 
                 <div v-if="authError" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded px-3 py-2 mb-4">{{ authError }}</div>
 
                 <form @submit.prevent="authMode === 'login' ? signIn() : signUp()">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <label class="block text-sm font-medium ms-ink-muted mb-1">Email</label>
                     <input v-model="authEmail" type="email" required autocomplete="email"
-                        class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        class="ms-input w-full rounded px-3 py-2 mb-4">
 
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <label class="block text-sm font-medium ms-ink-muted mb-1">Password</label>
                     <input v-model="authPassword" type="password" required
                         :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'"
-                        class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        class="ms-input w-full rounded px-3 py-2 mb-4">
 
                     <div v-if="authMode === 'signup'">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+                        <label class="block text-sm font-medium ms-ink-muted mb-1">Confirm password</label>
                         <input v-model="authPassword2" type="password" required autocomplete="new-password"
-                            class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            class="ms-input w-full rounded px-3 py-2 mb-4">
                     </div>
 
                     <button type="submit" :disabled="authLoading"
-                        class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium rounded px-3 py-2 transition">
+                        class="w-full disabled:opacity-50 text-white font-medium rounded px-3 py-2 transition" style="background:var(--ms-accent);">
                         {{ authLoading ? 'Please wait…' : (authMode === 'login' ? 'Sign In' : 'Create Account') }}
                     </button>
                 </form>
 
-                <p v-if="authMode === 'login' && signupAllowed" class="text-center text-sm text-gray-500 mt-4">
+                <p v-if="authMode === 'login' && signupAllowed" class="text-center text-sm ms-ink-muted mt-4">
                     First time here?
-                    <button @click="authMode = 'signup'; authError = ''" class="text-purple-600 hover:underline">Create the parent account</button>
+                    <button @click="authMode = 'signup'; authError = ''" class="ms-accent-text hover:underline">Create the parent account</button>
                 </p>
-                <p v-if="authMode === 'signup'" class="text-center text-sm text-gray-500 mt-4">
-                    <button @click="authMode = 'login'; authError = ''" class="text-purple-600 hover:underline">Back to sign in</button>
+                <p v-if="authMode === 'signup'" class="text-center text-sm ms-ink-muted mt-4">
+                    <button @click="authMode = 'login'; authError = ''" class="ms-accent-text hover:underline">Back to sign in</button>
                 </p>
             </div>
         </div>
@@ -191,10 +191,10 @@
                             <option v-for="s in students" :key="s.id" :value="s.id">{{ s.display_name || s.email }}</option>
                         </select>
                         <span v-else-if="(isParent || isViewer) && students.length === 0" class="text-sm text-gray-400">No students yet</span>
-                        <div v-if="studentGame" class="flex items-center gap-3 bg-purple-50 rounded-lg px-4 py-2 border border-purple-200">
-                            <span class="text-sm">🐉 Lv.{{ studentGame.dragon_level }}</span>
-                            <span class="text-sm">🪙 {{ studentGame.coins }}</span>
-                            <span v-if="appConfig" class="text-sm text-gray-500">{{ appConfig.school_year }}</span>
+                        <div v-if="studentGame" class="flex items-center gap-3 rounded-lg px-4 py-2" style="background:var(--ms-surface-raised); border:1px solid var(--ms-line-strong);">
+                            <span class="text-sm ms-ink">🐉 Lv.{{ studentGame.dragon_level }}</span>
+                            <span class="text-sm ms-ink">🪙 {{ studentGame.coins }}</span>
+                            <span v-if="appConfig" class="text-sm ms-ink-muted">{{ appConfig.school_year }}</span>
                         </div>
                         <p class="text-sm text-green-600" v-if="isConnected">
                             <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>Connected
@@ -967,27 +967,27 @@
 
                             <!-- Existing questions -->
                             <div v-if="getQuestions(quiz.id).length > 0" class="mt-3 space-y-2">
-                                <div v-for="q in getQuestions(quiz.id)" :key="q.id" class="bg-gray-50 rounded p-2 flex justify-between items-start text-sm">
+                                <div v-for="q in getQuestions(quiz.id)" :key="q.id" class="rounded p-2 flex justify-between items-start text-sm ms-ink" style="background:var(--ms-surface-raised); border:1px solid var(--ms-line);">
                                     <span>{{ q.question_number }}. {{ q.question_text }}</span>
                                     <button v-if="canEditContent" @click="deleteQuestion(quiz.id, q.id)" class="text-red-400 hover:text-red-600 ml-2">✕</button>
                                 </div>
                             </div>
 
                             <!-- Add question form -->
-                            <form v-if="canEditContent" @submit.prevent="addQuestion(quiz)" class="mt-4 bg-gray-50 rounded-lg p-4 space-y-2">
-                                <p class="text-xs font-semibold text-gray-500">ADD QUESTION</p>
-                                <input v-model="newQuestion[quiz.id].question_text" type="text" placeholder="Question text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" required />
+                            <form v-if="canEditContent" @submit.prevent="addQuestion(quiz)" class="mt-4 rounded-lg p-4 space-y-2" style="background:var(--ms-surface-raised); border:1px solid var(--ms-line);">
+                                <p class="text-xs font-semibold ms-ink-muted">ADD QUESTION</p>
+                                <input v-model="newQuestion[quiz.id].question_text" type="text" placeholder="Question text" class="ms-input w-full px-3 py-2 rounded text-sm" required />
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    <input v-for="(opt, oi) in newQuestion[quiz.id].options" :key="oi" v-model="newQuestion[quiz.id].options[oi]" type="text" :placeholder="'Option ' + (oi + 1)" class="px-3 py-2 border border-gray-300 rounded text-sm" required />
+                                    <input v-for="(opt, oi) in newQuestion[quiz.id].options" :key="oi" v-model="newQuestion[quiz.id].options[oi]" type="text" :placeholder="'Option ' + (oi + 1)" class="ms-input px-3 py-2 rounded text-sm" required />
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <label class="text-sm text-gray-600">Correct option:</label>
-                                    <select v-model.number="newQuestion[quiz.id].correct_option_index" class="px-2 py-1 border border-gray-300 rounded text-sm">
+                                    <label class="text-sm ms-ink-muted">Correct option:</label>
+                                    <select v-model.number="newQuestion[quiz.id].correct_option_index" class="ms-input px-2 py-1 rounded text-sm">
                                         <option v-for="(opt, oi) in newQuestion[quiz.id].options" :key="oi" :value="oi">Option {{ oi + 1 }}</option>
                                     </select>
                                 </div>
-                                <input v-model="newQuestion[quiz.id].explanation" type="text" placeholder="Explanation (optional)" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" />
-                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm">Add Question</button>
+                                <input v-model="newQuestion[quiz.id].explanation" type="text" placeholder="Explanation (optional)" class="ms-input w-full px-3 py-2 rounded text-sm" />
+                                <button type="submit" class="text-white px-3 py-1 rounded text-sm" style="background:var(--ms-accent);">Add Question</button>
                             </form>
                         </div>
                     </div>
