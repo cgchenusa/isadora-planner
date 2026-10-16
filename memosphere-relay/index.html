@@ -162,6 +162,12 @@
                     </button>
                 </form>
 
+                <button v-if="authMode === 'login'" @click="guestLogin" :disabled="authLoading"
+                    class="w-full disabled:opacity-50 font-medium rounded px-3 py-2 mt-3 transition"
+                    style="background:var(--ms-surface-raised); border:1px solid var(--ms-line-strong); color:var(--ms-ink);">
+                    Continue as Guest
+                </button>
+
                 <p v-if="authMode === 'login' && signupAllowed" class="text-center text-sm ms-ink-muted mt-4">
                     First time here?
                     <button @click="authMode = 'signup'; authError = ''" class="ms-accent-text hover:underline">Create the parent account</button>
@@ -1601,6 +1607,21 @@
                         }
                         this.session = data.session;
                         this.authPassword = '';
+                        await this.loadAppAfterAuth();
+                    } finally {
+                        this.authLoading = false;
+                    }
+                },
+                async guestLogin() {
+                    this.authError = '';
+                    this.authLoading = true;
+                    try {
+                        const { data, error } = await window.MemoSphereSupabase.authSignIn('guest@memosphere.app', 'MemoSphereGuest2026');
+                        if (error) {
+                            this.authError = 'Guest access is not set up yet.';
+                            return;
+                        }
+                        this.session = data.session;
                         await this.loadAppAfterAuth();
                     } finally {
                         this.authLoading = false;
