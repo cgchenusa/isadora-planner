@@ -359,7 +359,7 @@
                 <!-- Week pill selector (scoped to the selected school year) -->
                 <div class="flex items-center gap-2 flex-wrap mb-6">
                     <span class="text-sm font-medium ms-ink-muted mr-1">Select Week:</span>
-                    <button v-for="week in weeksForSelectedYear" :key="week.id" @click="selectedWeekId = week.id; selectedWeekSubjectId = null" :class="weekPillClass(week)">{{ week.week_number }}</button>
+                    <button v-for="week in weeksForSelectedYear" :key="week.id" @click="selectWeek(week.id)" :class="weekPillClass(week)">{{ week.week_number }}</button>
                     <span v-if="weeksForSelectedYear.length === 0" class="text-sm text-gray-400">No weeks yet for {{ selectedSchoolYear }}.</span>
                     <button v-if="canEditContent" @click="toggleAddWeekForm" class="ml-auto px-3 py-1.5 rounded-lg text-sm font-semibold transition" style="background:var(--ms-surface-raised); color:var(--ms-accent); border:1px solid var(--ms-line-strong);">➕ Add Week</button>
                 </div>
@@ -412,7 +412,7 @@
 
                     <!-- Subject pill tabs -->
                     <div class="flex items-center gap-2 flex-wrap pb-4 mb-6" style="border-bottom:1px solid var(--ms-line);">
-                        <button v-for="(subject, index) in subjectsForSelectedWeek" :key="subject.id" @click="selectedWeekSubjectId = subject.id" :class="subjectTabClass(subject, index)">
+                        <button v-for="(subject, index) in subjectsForSelectedWeek" :key="subject.id" @click="selectSubjectTab(subject)" :class="subjectTabClass(subject, index)">
                             {{ getSubjectEmoji(subject) }} {{ subject.subject_name }}
                         </button>
                         <button v-if="canEditContent" @click="showAddSubjectForm = !showAddSubjectForm" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm font-semibold transition">➕ Add Subject</button>
@@ -1561,7 +1561,17 @@
                         }
                         await this.loadStudentGame();
 
-                        if (this.activeWeek) {
+                        let lastWeekId = null, lastSubjectKind = null;
+                        try {
+                            lastWeekId = localStorage.getItem('ms_last_week_id');
+                            lastSubjectKind = localStorage.getItem('ms_last_subject_kind');
+                        } catch (e) { /* storage unavailable; ignore */ }
+                        const rememberedWeek = lastWeekId ? this.weeks.find(w => w.id === lastWeekId) : null;
+
+                        if (rememberedWeek) {
+                            this.selectedWeekId = rememberedWeek.id;
+                            this.selectedSchoolYear = rememberedWeek.school_year || null;
+                        } else if (this.activeWeek) {
                             this.selectedWeekId = this.activeWeek.id;
                             this.selectedSchoolYear = this.activeWeek.school_year || null;
                         } else if (this.weeks.length > 0) {
@@ -1571,6 +1581,10 @@
                             this.selectedWeekId = list[list.length - 1] ? list[list.length - 1].id : this.weeks[0].id;
                         } else if (this.appConfig && this.appConfig.school_year) {
                             this.selectedSchoolYear = this.appConfig.school_year;
+                        }
+                        if (lastSubjectKind) {
+                            const match = this.subjectsForSelectedWeek.find(s => this.subjectKind(s) === lastSubjectKind);
+                            if (match) this.selectedWeekSubjectId = match.id;
                         }
                         if (this.scopedSubjects.length > 0) {
                             this.selectedSubjectId = this.scopedSubjects[0].id;
@@ -1998,6 +2012,27 @@
                     const s = this.flashcardState(subject.id);
                     const index = total === 0 ? 0 : (s.index - 1 + total) % total;
                     this.flashcardReview = { ...this.flashcardReview, [subject.id]: { active: true, index, flipped: false } };
+                },
+                selectWeek(weekId) {
+                    // Keep whichever subject kind (History, Math, etc.) was open, carrying it
+                    // over to the newly selected week instead of always landing on the first tab.
+                    const prevKind = this.currentWeekSubject ? this.subjectKind(this.currentWeekSubject) : null;
+                    this.selectedWeekId = weekId;
+                    const list = this.subjectsForSelectedWeek;
+                    const match = prevKind ? list.find(s => this.subjectKind(s) === prevKind) : null;
+                    this.selectedWeekSubjectId = match ? match.id : null;
+                    this.rememberLastLocation();
+                },
+                selectSubjectTab(subject) {
+                    this.selectedWeekSubjectId = subject.id;
+                    this.rememberLastLocation();
+                },
+                rememberLastLocation() {
+                    try {
+                        if (this.selectedWeekId) localStorage.setItem('ms_last_week_id', this.selectedWeekId);
+                        const subj = this.currentWeekSubject;
+                        if (subj) localStorage.setItem('ms_last_subject_kind', this.subjectKind(subj));
+                    } catch (e) { /* storage unavailable; ignore */ }
                 },
                 onSchoolYearChange() {
                     // Switching year: jump to that year's in-progress week if it has one,
